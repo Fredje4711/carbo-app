@@ -88,7 +88,7 @@ Gebruik duidelijke opsomming en totaal. Beschrijving gebruiker: ${description.va
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${OPENAI_API_KEY}`
+        
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
