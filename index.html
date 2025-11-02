@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Foto Koolhydraat App</title>
+  <link rel="stylesheet" href="style.css">
+  
+  <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2c7be5">
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log('Service Worker geregistreerd'))
+        .catch(err => console.log('SW fout:', err));
+    });
+  }
+</script>
+
+  
+</head>
+<body>
+  <header>
+    <h1>🍽️ Foto Koolhydraat App</h1>
+  </header>
+
+  <main id="app">
+    <section id="input-section">
+      <label for="imageInput">📸 Maak of upload een foto</label>
+      <input type="file" id="imageInput" accept="image/*" capture="environment">
+
+      <label for="description">📝 Beschrijving (optioneel)</label>
+      <textarea id="description" placeholder="Bijv. links puree, rechts kip..."></textarea>
+
+      <div class="button-row">
+        <button id="micButton">🎙️ Spreek in</button>
+        <button id="analyzeButton">🔍 Analyseer</button>
+      </div>
+    </section>
+
+    <section id="result-section">
+      <img id="preview" src="" alt="" style="display:none;">
+      <pre id="resultText">Nog geen analyse uitgevoerd.</pre>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2025 - Persoonlijk gebruik</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
