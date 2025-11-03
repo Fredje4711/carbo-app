@@ -49,9 +49,13 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
   };
 
   recognition.onend = () => {
+  if (recognizing) {
+    // wacht 300 ms voor herstart (nodig op gsm)
+    setTimeout(() => recognition.start(), 300);
+  } else {
     micButton.textContent = '🎙️ Start spraak';
-    if (recognizing) recognition.start(); // herstart bij te vroege stop
-  };
+  }
+};
 
   recognition.onerror = (event) => {
     recognizing = false;
