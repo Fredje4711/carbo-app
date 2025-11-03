@@ -93,8 +93,6 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
   micButton.textContent = '🎙️ Niet ondersteund';
 }
 
-// wacht tot de pagina volledig geladen is
-window.addEventListener('DOMContentLoaded', () => {
 
  // ---------- AUDIO OPNAME via MediaRecorder + Whisper ----------
 window.addEventListener('DOMContentLoaded', () => {
@@ -163,11 +161,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
-
-
-
-
-
 
 // ---------- FOTO VERKLEINING ----------
 async function resizeImage(file, maxSize) {
