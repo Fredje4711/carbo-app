@@ -96,59 +96,74 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
 // wacht tot de pagina volledig geladen is
 window.addEventListener('DOMContentLoaded', () => {
 
-  // ---------- AUDIO OPNAME via MediaRecorder + Whisper ----------
+ // ---------- AUDIO OPNAME via MediaRecorder + Whisper ----------
+window.addEventListener('DOMContentLoaded', () => {
   const recordBtn = document.getElementById('recordBtn');
   const descriptionBox = document.getElementById('description');
   let mediaRecorder;
   let audioChunks = [];
+  let stream = null;
 
   recordBtn.addEventListener('click', async () => {
-    console.log("Whisper-knop geklikt"); // test
+    // Als er al een opname bezig is → stop deze netjes
     if (mediaRecorder && mediaRecorder.state === "recording") {
-  mediaRecorder.stop();
-  stream.getTracks().forEach(track => track.stop()); // ✅ sluit microfoon
-  recordBtn.textContent = "🎤 Opnemen (Whisper)";
-  return;
-}
-
+      console.log("Opname handmatig gestopt");
+      mediaRecorder.stop();
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop()); // ✅ sluit microfoon
+      }
+      recordBtn.textContent = "🎤 Opnemen (Whisper)";
+      return;
+    }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log("Start opname...");
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder = new MediaRecorder(stream);
       audioChunks = [];
 
-      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-	  
-	  console.log("Recorder gestopt, verzenden naar Whisper...");
-
+      mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
 
       mediaRecorder.onstop = async () => {
-		  
+        console.log("Opname gestopt, verzenden naar Whisper...");
         const blob = new Blob(audioChunks, { type: 'audio/webm' });
         const formData = new FormData();
         formData.append('audio', blob, 'opname.webm');
 
-        const response = await fetch('https://carbo-app.vercel.app/api/whisper', {
-          method: 'POST',
-          body: formData
-        });
+        try {
+          const response = await fetch('https://carbo-app.vercel.app/api/whisper', {
+            method: 'POST',
+            body: formData
+          });
+          const data = await response.json();
+          console.log("Antwoord van Whisper:", data);
 
-        const data = await response.json();
-		console.log("Antwoord van Whisper:", data);
-        if (data.text) {
-          descriptionBox.value += (descriptionBox.value ? ' ' : '') + data.text;
+          if (data.text) {
+            descriptionBox.value += (descriptionBox.value ? ' ' : '') + data.text;
+          }
+        } catch (err) {
+          console.error("Fout bij verzenden naar Whisper:", err);
+          alert("Er ging iets mis bij de verwerking van de opname.");
         }
+
+        // microfoon volledig afsluiten
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+          stream = null;
+        }
+
+        recordBtn.textContent = "🎤 Opnemen (Whisper)";
       };
 
       mediaRecorder.start();
       recordBtn.textContent = "🛑 Stop opname";
     } catch (err) {
-      console.error("Microfoon niet beschikbaar:", err);
+      console.error("Microfoon niet beschikbaar of toestemming geweigerd:", err);
       alert("Microfoon niet beschikbaar of toestemming geweigerd.");
     }
   });
+});
 
-}); // 👈 sluitregel
 
 
 
