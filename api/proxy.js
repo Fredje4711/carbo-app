@@ -1,4 +1,13 @@
 module.exports = async (req, res) => {
+  // CORS preflight (voor GitHub Pages)
+  if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.status(200).end();
+    return;
+  }
+
   if (req.method !== "POST") {
     res.status(405).json({ error: "Use POST" });
     return;
@@ -18,7 +27,7 @@ module.exports = async (req, res) => {
 
     const data = await response.text();
 
-    // CORS headers
+    // CORS toestaan voor uw frontend (GitHub)
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
