@@ -1,3 +1,6 @@
+
+document.addEventListener("DOMContentLoaded", () => {
+
 // ---------- FOTO PREVIEW + OPSLAG ----------
 const cameraInput = document.getElementById('cameraInput');
 const fileInput = document.getElementById('fileInput');
@@ -272,4 +275,6 @@ if (infoLink && infoPopup && closePopup) {
     }
   });
 }
+}); // sluit DOMContentLoaded
+
 
