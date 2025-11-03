@@ -28,27 +28,53 @@ fileInput.addEventListener('change', handleImageSelection);
 const micButton = document.getElementById('micButton');
 const description = document.getElementById('description');
 let recognition;
+let recognizing = false;
 
 if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SpeechRecognition();
   recognition.lang = 'nl-NL';
   recognition.interimResults = false;
+  recognition.continuous = true;
+  recognition.maxAlternatives = 1;
 
   recognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript;
+    const transcript = event.results[event.results.length - 1][0].transcript.trim();
     description.value += (description.value ? ' ' : '') + transcript;
   };
 
-  recognition.onerror = (event) => alert('Spraakherkenning mislukt: ' + event.error);
+  recognition.onstart = () => {
+    recognizing = true;
+    micButton.textContent = '🛑 Stop spraak';
+  };
+
+  recognition.onend = () => {
+    micButton.textContent = '🎙️ Start spraak';
+    if (recognizing) recognition.start(); // herstart bij te vroege stop
+  };
+
+  recognition.onerror = (event) => {
+    recognizing = false;
+    micButton.textContent = '🎙️ Start spraak';
+    console.warn('Spraakherkenning fout:', event.error);
+  };
+
+  micButton.addEventListener('click', () => {
+    if (recognizing) {
+      recognition.stop();
+      recognizing = false;
+      micButton.textContent = '🎙️ Start spraak';
+    } else {
+      recognition.start();
+      recognizing = true;
+      micButton.textContent = '🛑 Stop spraak';
+    }
+  });
 } else {
   micButton.disabled = true;
   micButton.textContent = '🎙️ Niet ondersteund';
 }
 
-micButton.addEventListener('click', () => {
-  if (recognition) recognition.start();
-});
 
 // ---------- FOTO VERKLEINING ----------
 async function resizeImage(file, maxSize) {
@@ -89,7 +115,7 @@ Gebruik duidelijke opsomming en totaal. Beschrijving gebruiker: ${description.va
 `;
 
   try {
-    const response = await fetch("https://carbo-proxy.fredje4711.workers.dev", {
+    const response = await fetch("https://carbo-app.vercel.app/api/proxy", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
