@@ -120,3 +120,26 @@ Gebruik duidelijke opsomming en totaal. Beschrijving gebruiker: ${description.va
     resultText.textContent = "❌ Fout bij analyse: " + err.message;
   }
 });
+
+// ---------- Popup "Meer uitleg…" ----------
+const infoLink = document.getElementById("infoLink");
+const infoPopup = document.getElementById("infoPopup");
+const closePopup = document.getElementById("closePopup");
+
+if (infoLink && infoPopup && closePopup) {
+  infoLink.addEventListener("click", () => {
+    infoPopup.style.display = "block";
+  });
+
+  closePopup.addEventListener("click", () => {
+    infoPopup.style.display = "none";
+  });
+
+  // sluiten bij tikken buiten de popup
+  infoPopup.addEventListener("click", (e) => {
+    if (e.target === infoPopup) {
+      infoPopup.style.display = "none";
+    }
+  });
+}
+

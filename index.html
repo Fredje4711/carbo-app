@@ -22,15 +22,14 @@
 </head>
 <body>
   <header>
-    <h1>🍽️ Foto Koolhydraat App</h1>
+    <h1>🍽️ Koolhydraten Scanner</h1>
   </header>
 
   <main id="app">
     <section id="input-section">
-      <label>📸 Maak of upload een foto</label>
 <div class="upload-buttons">
   <label class="btn-camera">
-    📷 Maak foto
+    📸 Maak foto
     <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;">
   </label>
 
@@ -41,8 +40,37 @@
 </div>
 
 
-      <label for="description">📝 Beschrijving (optioneel)</label>
-      <textarea id="description" placeholder="Bijv. links puree, rechts kip..."></textarea>
+      <div class="desc-label">
+  <label for="description">📝 Beschrijving (optioneel)</label>
+  <span id="infoLink" class="info-link"><b>Meer uitleg…</b></span>
+</div>
+
+<textarea id="description" placeholder="Voeg eventueel wat uitleg toe..."></textarea>
+
+<!-- Popup uitleg -->
+<div id="infoPopup" class="info-popup">
+  <div class="popup-content">
+    <button class="close-popup" id="closePopup">✖</button>
+    <p>
+  📸 <b>Maak of upload</b> een duidelijke foto van je maaltijd.<br><br>
+
+  📝 <b>Beschrijf</b> eventueel kort wat er op het bord ligt (ingrediënten, portie, saus …).  
+  Deze tekstbeschrijving is <b>optioneel</b> — je hoeft dus niet altijd iets in te vullen,  
+  maar extra informatie kan wel helpen om het resultaat nauwkeuriger te maken.<br><br>
+
+  🎙️ <b>Gebruik van spraak</b> is eveneens <b>optioneel</b>.  
+  Je kunt tekst inspreken in plaats van te typen, of als aanvulling op wat je al hebt ingevuld.  
+  De herkende tekst verschijnt automatisch in het tekstvak.<br><br>
+
+  🔍 Tik daarna op <b>Analyseer</b> om de koolhydraten te laten berekenen.<br><br>
+
+  💡 <b>Note:</b> de berekening blijft altijd een <b>geschatte waarde</b>,  
+  afhankelijk van de kwaliteit van de foto en de duidelijkheid van de ingevoerde tekst of spraak.
+</p>
+
+  </div>
+</div>
+
 
       <div class="button-row">
         <button id="micButton">🎙️ Spreek in</button>
