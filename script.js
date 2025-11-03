@@ -39,28 +39,31 @@ if (micButton) {
   if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
+	recognition.continuous = true; // blijf luisteren, niet stoppen bij stilte
+
     recognition.lang = 'nl-NL';
     recognition.interimResults = false;
-    recognition.continuous = false;
+    recognition.continuous = true;  // ✅ deze regel dus toevoegen of op true zetten
     recognition.maxAlternatives = 1;
+
 
     recognition.onresult = (event) => {
       const transcript = event.results[event.results.length - 1][0].transcript.trim();
       description.value += (description.value ? ' ' : '') + transcript;
     };
 
-    recognition.onstart = () => {
-      recognizing = true;
-      micButton.textContent = '🛑 Stop opname';
-      clearTimeout(stopTimer);
-      stopTimer = setTimeout(() => {
-        if (recognizing) {
-          recognition.stop();
-          recognizing = false;
-          micButton.textContent = '🎙️ Start spraak';
-        }
-      }, 12000);
-    };
+ //   recognition.onstart = () => {
+ //     recognizing = true;
+ //     micButton.textContent = '🛑 Stop opname';
+ //     clearTimeout(stopTimer);
+ //     stopTimer = setTimeout(() => {
+ //       if (recognizing) {
+ //         recognition.stop();
+ //         recognizing = false;
+ //         micButton.textContent = '🎙️ Start spraak';
+ //       }
+ //     }, 12000);
+ //   };
 
     recognition.onend = () => {
       clearTimeout(stopTimer);
