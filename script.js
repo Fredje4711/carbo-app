@@ -29,15 +29,17 @@ const micButton = document.getElementById('micButton');
 const description = document.getElementById('description');
 let recognition;
 let recognizing = false;
+let stopTimer; // ⏱️ timer om automatisch te stoppen
 
 if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SpeechRecognition();
   recognition.lang = 'nl-NL';
   recognition.interimResults = false;
-  recognition.continuous = true;
+  recognition.continuous = false;     // we gebruiken nu zelf de timer
   recognition.maxAlternatives = 1;
 
+  // tekstresultaat
   recognition.onresult = (event) => {
     const transcript = event.results[event.results.length - 1][0].transcript.trim();
     description.value += (description.value ? ' ' : '') + transcript;
@@ -45,39 +47,52 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
 
   recognition.onstart = () => {
     recognizing = true;
-    micButton.textContent = '🛑 Stop spraak';
+    micButton.textContent = '🛑 Stop opname';
+
+    // ⏱️ automatische stop na 12 seconden
+    clearTimeout(stopTimer);
+    stopTimer = setTimeout(() => {
+      if (recognizing) {
+        recognition.stop();
+        recognizing = false;
+        micButton.textContent = '🎙️ Start spraak';
+      }
+    }, 12000); // 12 seconden = 12000 ms
   };
 
   recognition.onend = () => {
-  if (recognizing) {
-    // wacht 300 ms voor herstart (nodig op gsm)
-    setTimeout(() => recognition.start(), 300);
-  } else {
+    clearTimeout(stopTimer);
+    recognizing = false;
     micButton.textContent = '🎙️ Start spraak';
-  }
-};
+  };
 
   recognition.onerror = (event) => {
+    clearTimeout(stopTimer);
     recognizing = false;
     micButton.textContent = '🎙️ Start spraak';
     console.warn('Spraakherkenning fout:', event.error);
   };
 
+  // knopbediening
   micButton.addEventListener('click', () => {
+    if (!recognition) return;
     if (recognizing) {
+      // handmatig stoppen vóór 12 sec
       recognition.stop();
+      clearTimeout(stopTimer);
       recognizing = false;
       micButton.textContent = '🎙️ Start spraak';
     } else {
       recognition.start();
       recognizing = true;
-      micButton.textContent = '🛑 Stop spraak';
+      micButton.textContent = '🛑 Stop opname';
     }
   });
 } else {
   micButton.disabled = true;
   micButton.textContent = '🎙️ Niet ondersteund';
 }
+
 
 
 // ---------- FOTO VERKLEINING ----------
