@@ -98,7 +98,6 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
 
 
  // ---------- AUDIO OPNAME via MediaRecorder + Whisper ----------
-window.addEventListener('DOMContentLoaded', () => {
   const recordBtn = document.getElementById('recordBtn');
   const descriptionBox = document.getElementById('description');
   let mediaRecorder;
@@ -180,8 +179,6 @@ recordBtn.classList.remove("recording"); // 🔵 zet terug blauw
     alert("Microfoon niet beschikbaar of toestemming geweigerd.");
   }
 });
-}); // 👈 sluit het DOMContentLoaded-blok van Whisper
-
 
 // ---------- FOTO VERKLEINING ----------
 async function resizeImage(file, maxSize) {
