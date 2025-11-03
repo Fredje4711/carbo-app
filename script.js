@@ -93,6 +93,58 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
   micButton.textContent = '🎙️ Niet ondersteund';
 }
 
+// wacht tot de pagina volledig geladen is
+window.addEventListener('DOMContentLoaded', () => {
+
+  // ---------- AUDIO OPNAME via MediaRecorder + Whisper ----------
+  const recordBtn = document.getElementById('recordBtn');
+  const descriptionBox = document.getElementById('description');
+  let mediaRecorder;
+  let audioChunks = [];
+
+  recordBtn.addEventListener('click', async () => {
+    console.log("Whisper-knop geklikt"); // test
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+      mediaRecorder.stop();
+      recordBtn.textContent = "🎤 Opnemen (Whisper)";
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+
+      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+        const formData = new FormData();
+        formData.append('audio', blob, 'opname.webm');
+
+        const response = await fetch('https://carbo-app.vercel.app/api/whisper', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+        if (data.text) {
+          descriptionBox.value += (descriptionBox.value ? ' ' : '') + data.text;
+        }
+      };
+
+      mediaRecorder.start();
+      recordBtn.textContent = "🛑 Stop opname";
+    } catch (err) {
+      console.error("Microfoon niet beschikbaar:", err);
+      alert("Microfoon niet beschikbaar of toestemming geweigerd.");
+    }
+  });
+
+}); // 👈 sluitregel
+
+
+
 
 
 // ---------- FOTO VERKLEINING ----------
