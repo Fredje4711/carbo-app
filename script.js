@@ -84,7 +84,7 @@ Gebruik duidelijke opsomming en totaal. Beschrijving gebruiker: ${description.va
 `;
 
   try {
-    const response = await fetch("https://carbo-proxy.fredje4711.workers.dev", {
+    const response = await fetch("https://carbo-app.vercel.app/api/proxy", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
