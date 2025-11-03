@@ -1,52 +1,67 @@
+// api/whisper.js
+import Busboy from "busboy";
+
 export const config = {
   api: { bodyParser: false },
 };
 
 export default async function handler(req, res) {
-  // Alleen POST toestaan
+  // CORS toestaan
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   if (req.method !== "POST") {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.status(405).json({ error: "Use POST" });
-    return;
+    return res.status(405).json({ error: "Use POST" });
   }
 
   try {
-    // CORS headers
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    // 🟦 Lees multipart audio via Busboy
+    const busboy = Busboy({ headers: req.headers });
+    let fileBuffer = null;
 
-    // Lees multipart-formdata
-    const formData = await req.formData();
-    const audioFile = formData.get("audio");
-
-    if (!audioFile) {
-      return res.status(400).json({ error: "Geen audio ontvangen" });
-    }
-
-    // Stuur naar OpenAI Whisper
-    const whisperReq = new FormData();
-    whisperReq.append("file", audioFile);
-    whisperReq.append("model", "whisper-1");
-
-    const openaiResp = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: whisperReq,
+    await new Promise((resolve, reject) => {
+      busboy.on("file", (_, file) => {
+        const chunks = [];
+        file.on("data", (chunk) => chunks.push(chunk));
+        file.on("end", () => {
+          fileBuffer = Buffer.concat(chunks);
+        });
+      });
+      busboy.on("finish", resolve);
+      busboy.on("error", reject);
+      req.pipe(busboy);
     });
 
-    if (!openaiResp.ok) {
-      const errTxt = await openaiResp.text();
-      console.error("Whisper-API fout:", errTxt);
-      return res.status(500).json({ error: "Whisper-API mislukt", detail: errTxt });
+    if (!fileBuffer) {
+      return res.status(400).json({ error: "Geen audiobestand ontvangen" });
     }
 
+    // 🟩 Bouw formdata voor Whisper
+    const formData = new FormData();
+    formData.append("file", new Blob([fileBuffer]), "audio.webm");
+    formData.append("model", "whisper-1");
+
+    // 🟧 Vraag transcriptie aan OpenAI Whisper
+    const openaiResp = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+      body: formData,
+    });
+
     const data = await openaiResp.json();
+
+    if (!openaiResp.ok) {
+      console.error("Whisper API-fout:", data);
+      return res.status(500).json({ error: data });
+    }
+
     res.status(200).json(data);
-  } catch (error) {
-    console.error("Serverfout:", error);
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    console.error("Serverfout:", err);
+    res.status(500).json({ error: err.message });
   }
 }
