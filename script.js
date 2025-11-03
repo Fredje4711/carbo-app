@@ -30,71 +30,69 @@ fileInput.addEventListener('change', handleImageSelection);
 // ---------- SPRAAKHERKENNING ----------
 const micButton = document.getElementById('micButton');
 const description = document.getElementById('description');
-let recognition;
-let recognizing = false;
-let stopTimer; // ⏱️ timer om automatisch te stoppen
 
-if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  recognition = new SpeechRecognition();
-  recognition.lang = 'nl-NL';
-  recognition.interimResults = false;
-  recognition.continuous = false;     // we gebruiken nu zelf de timer
-  recognition.maxAlternatives = 1;
+if (micButton) {
+  let recognition;
+  let recognizing = false;
+  let stopTimer;
 
-  // tekstresultaat
-  recognition.onresult = (event) => {
-    const transcript = event.results[event.results.length - 1][0].transcript.trim();
-    description.value += (description.value ? ' ' : '') + transcript;
-  };
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = 'nl-NL';
+    recognition.interimResults = false;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
 
-  recognition.onstart = () => {
-    recognizing = true;
-    micButton.textContent = '🛑 Stop opname';
+    recognition.onresult = (event) => {
+      const transcript = event.results[event.results.length - 1][0].transcript.trim();
+      description.value += (description.value ? ' ' : '') + transcript;
+    };
 
-    // ⏱️ automatische stop na 12 seconden
-    clearTimeout(stopTimer);
-    stopTimer = setTimeout(() => {
-      if (recognizing) {
-        recognition.stop();
-        recognizing = false;
-        micButton.textContent = '🎙️ Start spraak';
-      }
-    }, 12000); // 12 seconden = 12000 ms
-  };
+    recognition.onstart = () => {
+      recognizing = true;
+      micButton.textContent = '🛑 Stop opname';
+      clearTimeout(stopTimer);
+      stopTimer = setTimeout(() => {
+        if (recognizing) {
+          recognition.stop();
+          recognizing = false;
+          micButton.textContent = '🎙️ Start spraak';
+        }
+      }, 12000);
+    };
 
-  recognition.onend = () => {
-    clearTimeout(stopTimer);
-    recognizing = false;
-    micButton.textContent = '🎙️ Start spraak';
-  };
-
-  recognition.onerror = (event) => {
-    clearTimeout(stopTimer);
-    recognizing = false;
-    micButton.textContent = '🎙️ Start spraak';
-    console.warn('Spraakherkenning fout:', event.error);
-  };
-
-  // knopbediening
-  micButton.addEventListener('click', () => {
-    if (!recognition) return;
-    if (recognizing) {
-      // handmatig stoppen vóór 12 sec
-      recognition.stop();
+    recognition.onend = () => {
       clearTimeout(stopTimer);
       recognizing = false;
       micButton.textContent = '🎙️ Start spraak';
-    } else {
-      recognition.start();
-      recognizing = true;
-      micButton.textContent = '🛑 Stop opname';
-    }
-  });
-} else {
-  micButton.disabled = true;
-  micButton.textContent = '🎙️ Niet ondersteund';
+    };
+
+    recognition.onerror = () => {
+      clearTimeout(stopTimer);
+      recognizing = false;
+      micButton.textContent = '🎙️ Start spraak';
+    };
+
+    micButton.addEventListener('click', () => {
+      if (!recognition) return;
+      if (recognizing) {
+        recognition.stop();
+        clearTimeout(stopTimer);
+        recognizing = false;
+        micButton.textContent = '🎙️ Start spraak';
+      } else {
+        recognition.start();
+        recognizing = true;
+        micButton.textContent = '🛑 Stop opname';
+      }
+    });
+  } else {
+    micButton.disabled = true;
+    micButton.textContent = '🎙️ Niet ondersteund';
+  }
 }
+
 
 
  // ---------- AUDIO OPNAME via MediaRecorder + Whisper ----------
