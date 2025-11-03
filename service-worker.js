@@ -1,4 +1,4 @@
-const CACHE_NAME = 'carbo-app-v2';
+const CACHE_NAME = 'carbo-app-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -31,3 +31,4 @@ self.addEventListener('fetch', event => {
     caches.match(event.request).then(resp => resp || fetch(event.request))
   );
 });
+
