@@ -113,6 +113,17 @@ footer {
   background-color: #1e5bb8;
 }
 
+/* 🎤 Whisper-knop standaard en actief kleur */
+#recordBtn {
+  background-color: #007bff;     /* blauw zoals uw andere knoppen */
+  color: white;
+  transition: background-color 0.3s ease;
+}
+
+#recordBtn.recording {
+  background-color: #dc3545;     /* rood tijdens opname */
+}
+
 /* label + "Meer uitleg…" rechts */
 .desc-label {
   display: flex;

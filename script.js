@@ -115,9 +115,11 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // ⏱️ kleine vertraging zodat 'onstop' event eerst kan afwerken
-    setTimeout(() => {
-      recordBtn.textContent = "🎤 Opnemen (Whisper)";
-    }, 500);
+setTimeout(() => {
+  recordBtn.textContent = "🎤 Inspreken";
+  recordBtn.classList.remove("recording"); // 🔵 zet terug blauw
+}, 500);
+
 
     return;
   }
@@ -160,12 +162,16 @@ window.addEventListener('DOMContentLoaded', () => {
       }
 
       // knop terugzetten (extra zekerheid)
-      recordBtn.textContent = "🎤 Opnemen (Whisper)";
+      recordBtn.textContent = "🎤 Inspreken";
+recordBtn.classList.remove("recording"); // 🔵 zet terug blauw
+
     };
 
     // start opname
     mediaRecorder.start();
     recordBtn.textContent = "🛑 Stop opname";
+    recordBtn.classList.add("recording"); // 🔴 zet rood aan
+
   } catch (err) {
     console.error("Microfoon niet beschikbaar of toestemming geweigerd:", err);
     alert("Microfoon niet beschikbaar of toestemming geweigerd.");
