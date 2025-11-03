@@ -1,9 +1,10 @@
 // ---------- FOTO PREVIEW + OPSLAG ----------
-const imageInput = document.getElementById('imageInput');
+const cameraInput = document.getElementById('cameraInput');
+const fileInput = document.getElementById('fileInput');
 const preview = document.getElementById('preview');
 let currentImageData = null;
 
-imageInput.addEventListener('change', async (event) => {
+async function handleImageSelection(event) {
   const file = event.target.files[0];
   if (file) {
     // toon preview
@@ -17,7 +18,11 @@ imageInput.addEventListener('change', async (event) => {
     // verklein afbeelding vóór verzending
     currentImageData = await resizeImage(file, 1024);
   }
-});
+}
+
+cameraInput.addEventListener('change', handleImageSelection);
+fileInput.addEventListener('change', handleImageSelection);
+
 
 // ---------- SPRAAKHERKENNING ----------
 const micButton = document.getElementById('micButton');
@@ -84,7 +89,7 @@ Gebruik duidelijke opsomming en totaal. Beschrijving gebruiker: ${description.va
 `;
 
   try {
-    const response = await fetch("https://carbo-app.vercel.app/api/proxy", {
+    const response = await fetch("https://carbo-proxy.fredje4711.workers.dev", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

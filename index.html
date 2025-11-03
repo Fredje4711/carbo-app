@@ -27,8 +27,19 @@
 
   <main id="app">
     <section id="input-section">
-      <label for="imageInput">📸 Maak of upload een foto</label>
-      <input type="file" id="imageInput" accept="image/*" capture="environment">
+      <label>📸 Maak of upload een foto</label>
+<div class="upload-buttons">
+  <label class="btn-camera">
+    📷 Maak foto
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;">
+  </label>
+
+  <label class="btn-file">
+    📁 Kies bestand
+    <input type="file" id="fileInput" accept="image/*" style="display:none;">
+  </label>
+</div>
+
 
       <label for="description">📝 Beschrijving (optioneel)</label>
       <textarea id="description" placeholder="Bijv. links puree, rechts kip..."></textarea>
