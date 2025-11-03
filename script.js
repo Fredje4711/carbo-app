@@ -105,10 +105,12 @@ window.addEventListener('DOMContentLoaded', () => {
   recordBtn.addEventListener('click', async () => {
     console.log("Whisper-knop geklikt"); // test
     if (mediaRecorder && mediaRecorder.state === "recording") {
-      mediaRecorder.stop();
-      recordBtn.textContent = "🎤 Opnemen (Whisper)";
-      return;
-    }
+  mediaRecorder.stop();
+  stream.getTracks().forEach(track => track.stop()); // ✅ sluit microfoon
+  recordBtn.textContent = "🎤 Opnemen (Whisper)";
+  return;
+}
+
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -116,8 +118,12 @@ window.addEventListener('DOMContentLoaded', () => {
       audioChunks = [];
 
       mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+	  
+	  console.log("Recorder gestopt, verzenden naar Whisper...");
+
 
       mediaRecorder.onstop = async () => {
+		  
         const blob = new Blob(audioChunks, { type: 'audio/webm' });
         const formData = new FormData();
         formData.append('audio', blob, 'opname.webm');
@@ -128,6 +134,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
 
         const data = await response.json();
+		console.log("Antwoord van Whisper:", data);
         if (data.text) {
           descriptionBox.value += (descriptionBox.value ? ' ' : '') + data.text;
         }
