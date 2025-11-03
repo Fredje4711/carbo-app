@@ -195,12 +195,7 @@ try {
   console.error("Microfoon niet beschikbaar of toestemming geweigerd:", err);
   alert("Microfoon niet beschikbaar of toestemming geweigerd.");
 }
-
-      // knop terugzetten (extra zekerheid)
-      recordBtn.textContent = "🎤 Inspreken";
-recordBtn.classList.remove("recording"); // 🔵 zet terug blauw
-
-    };    
+}); // sluit recordBtn.addEventListene
 
 // ---------- FOTO VERKLEINING ----------
 async function resizeImage(file, maxSize) {
