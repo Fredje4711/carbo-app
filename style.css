@@ -42,8 +42,16 @@ textarea {
 }
 
 textarea {
-  resize: vertical;
-  min-height: 60px;
+  width: calc(100% - 10px);
+  margin: 8px 0px -2px 5px;   /* ondermarge verminderd van 14px → 8px */
+  padding: 8px 12px 10px 12px;  /* minder bovenpadding, iets meer onderruimte */
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  resize: none;
+  font-size: 15px;
+  line-height: 1.4;
+  box-sizing: border-box;
+  min-height: 90px;
 }
 
 .button-row {

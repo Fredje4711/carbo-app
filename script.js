@@ -313,15 +313,21 @@ if (resetBtn) {
     const preview = document.getElementById("preview");
     if (preview) preview.src = "";
 
+    // wis inputs (camera & bestand)
+    const cameraInput = document.getElementById("cameraInput");
+    const fileInput = document.getElementById("fileInput");
+    if (cameraInput) cameraInput.value = "";
+    if (fileInput) fileInput.value = "";
+
     // wis beschrijving
     const descriptionBox = document.getElementById("description");
     if (descriptionBox) descriptionBox.value = "";
 
-    /// wis resultaat
-const resultText = document.getElementById("resultText");
-if (resultText) {
-  resultText.textContent = "Nog geen analyse uitgevoerd.";
-}
+    // wis resultaat
+    const resultText = document.getElementById("resultText");
+    if (resultText) {
+      resultText.textContent = "Nog geen analyse uitgevoerd.";
+    }
 
     // eventueel scroll naar boven
     window.scrollTo({ top: 0, behavior: "smooth" });
