@@ -304,6 +304,30 @@ if (infoLink && infoPopup && closePopup) {
     }
   });
 }
+
+// ---------- RESET-FUNCTIE ----------
+const resetBtn = document.getElementById("resetBtn");
+if (resetBtn) {
+  resetBtn.addEventListener("click", () => {
+    // wis afbeelding
+    const preview = document.getElementById("preview");
+    if (preview) preview.src = "";
+
+    // wis beschrijving
+    const descriptionBox = document.getElementById("description");
+    if (descriptionBox) descriptionBox.value = "";
+
+    /// wis resultaat
+const resultText = document.getElementById("resultText");
+if (resultText) {
+  resultText.textContent = "Nog geen analyse uitgevoerd.";
+}
+
+    // eventueel scroll naar boven
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+}
+
 }); // sluit DOMContentLoaded
 
 

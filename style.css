@@ -89,6 +89,37 @@ footer {
   margin-top: 1rem;
 }
 
+/* ---------- RESET-KNOP ---------- */
+#resetBtn {
+  background-color: #bbbbbb;       /* neutraal grijs */
+  color: #222;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 4vw;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  transition: background 0.3s;
+}
+
+#resetBtn:hover {
+  background-color: #999999;
+}
+
+@media (min-width: 600px) {
+  #resetBtn {
+    font-size: 14px;
+    padding: 6px 12px;
+  }
+}
+
+#resultText {
+  white-space: pre-wrap;
+  font-family: inherit;
+  color: #444;
+}
+
 /* --- Camera & bestand knoppen --- */
 .upload-buttons {
   display: flex;
