@@ -104,6 +104,10 @@ if (micButton) {
   let mediaRecorder;
   let audioChunks = [];
   let stream = null;
+  let audioContext = null;     // nieuw
+  let oscillator = null;       // nieuw
+  let keepAliveGain = null;    // nieuw
+
 
   recordBtn.addEventListener('click', async () => {
   // als er al een opname bezig is → stop deze netjes
@@ -130,23 +134,29 @@ setTimeout(() => {
 try {
   console.log("🟩 Start opname...");
 
-  // Vraag audio aan met instellingen die voorkomen dat hij stopt bij stilte
-  stream = await navigator.mediaDevices.getUserMedia({
-    audio: {
-      echoCancellation: true,
-      noiseSuppression: false,
-      autoGainControl: false,
-      channelCount: 1
-    }
-  });
+// Vraag audio aan met instellingen die voorkomen dat hij stopt bij stilte
+stream = await navigator.mediaDevices.getUserMedia({
+  audio: {
+    echoCancellation: true,
+    noiseSuppression: false,
+    autoGainControl: false,
+    channelCount: 1
+  }
+});
 
-  // Houd de stream actief, ook bij stilte
-  const audioContext = new AudioContext();
-  const source = audioContext.createMediaStreamSource(stream);
-  const silentNode = audioContext.createGain();
-  silentNode.gain.value = 1.0; // constant signaal
-  source.connect(silentNode);
-  silentNode.connect(audioContext.destination);
+// 📢 Houd de opname actief op mobiel: genereer constante stilte (zonder mic naar speakers te routen)
+try {
+  audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  oscillator = audioContext.createOscillator();
+  keepAliveGain = audioContext.createGain();
+  keepAliveGain.gain.value = 0.00001; // praktisch onhoorbaar
+  oscillator.connect(keepAliveGain).connect(audioContext.destination);
+  oscillator.start();
+} catch (e) {
+  console.warn("Silent-tone activatie niet mogelijk:", e);
+}
+
+
 
   mediaRecorder = new MediaRecorder(stream);
   audioChunks = [];
@@ -181,6 +191,11 @@ try {
       stream.getTracks().forEach(track => track.stop());
       stream = null;
     }
+	
+	// keep-alive toon uitzetten en context sluiten
+if (oscillator) { try { oscillator.stop(); } catch(e){} oscillator = null; }
+if (audioContext) { try { audioContext.close(); } catch(e){} audioContext = null; }
+keepAliveGain = null;
 
     recordBtn.textContent = "🎤 Inspreken";
     recordBtn.classList.remove("recording");
