@@ -27,16 +27,16 @@ export default async function handler(req) {
     return send({ ok: false, error: "Alleen POST is toegestaan" }, 405);
   }
 
-  try {
-    // ✅ Belangrijk: body ophalen als JSON (niet .text(), niet .formData())
-    const body = await req.json(); // { model, messages }
+    try {
+    const body = await req.json();
 
-    // Mini sanity-check
+    // 🟡 Log wat er van de frontend binnenkomt
+    console.log("🔹 FRONTEND PAYLOAD:", JSON.stringify(body, null, 2));
+
     if (!body?.messages || !Array.isArray(body.messages)) {
       return send({ ok: false, error: "Ongeldige payload: 'messages' ontbreekt" }, 400);
     }
 
-    // Call naar OpenAI
     const resp = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -50,14 +50,11 @@ export default async function handler(req) {
       }),
     });
 
-    const raw = await resp.text(); // we lezen eerst als text om evt. fouten te loggen
+    const raw = await resp.text();
+    console.log("🟢 RAW OpenAI response:", raw.slice(0, 400));
 
     if (!resp.ok) {
-      // Doorzetten wat OpenAI teruggaf helpt bij debuggen van 500’s
-      return send(
-        { ok: false, error: `OpenAI API-fout: ${resp.status}`, raw: raw.slice(0, 500) },
-        500
-      );
+      return send({ ok: false, error: `OpenAI API-fout: ${resp.status}`, raw: raw.slice(0, 500) }, 500);
     }
 
     let data;
@@ -76,4 +73,3 @@ export default async function handler(req) {
   } catch (err) {
     return send({ ok: false, error: err.message }, 500);
   }
-}
