@@ -1,75 +1,39 @@
-export const config = { runtime: "edge" };
-
-export default async function handler(req) {
-  // Sta zowel je GitHub Pages als je Vercel domein toe
-  const allowedOrigins = [
-    "https://fredje4711.github.io",
-    "https://carbo-app.vercel.app",
-  ];
-  const origin = req.headers.get("origin") || "";
-  const allow = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
-
-  const send = (obj, status = 200) =>
-    new Response(JSON.stringify(obj), {
-      status,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": allow,
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-      },
-    });
-
-  // Preflight
-  if (req.method === "OPTIONS") return send({ ok: true });
-
-  if (req.method !== "POST") {
-    return send({ ok: false, error: "Alleen POST is toegestaan" }, 405);
+module.exports = async (req, res) => {
+  // CORS preflight (voor GitHub Pages)
+  if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.status(200).end();
+    return;
   }
 
-    try {
-    const body = await req.json();
+  if (req.method !== "POST") {
+    res.status(405).json({ error: "Use POST" });
+    return;
+  }
 
-    // 🟡 Log wat er van de frontend binnenkomt
-    console.log("🔹 FRONTEND PAYLOAD:", JSON.stringify(body, null, 2));
+  try {
+    const body = req.body;
 
-    if (!body?.messages || !Array.isArray(body.messages)) {
-      return send({ ok: false, error: "Ongeldige payload: 'messages' ontbreekt" }, 400);
-    }
-
-    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
       },
-      body: JSON.stringify({
-        model: body.model || "gpt-4o-mini",
-        messages: body.messages,
-        temperature: 0.5,
-      }),
+      body: JSON.stringify(body),
     });
 
-    const raw = await resp.text();
-    console.log("🟢 RAW OpenAI response:", raw.slice(0, 400));
+    const data = await response.text();
 
-    if (!resp.ok) {
-      return send({ ok: false, error: `OpenAI API-fout: ${resp.status}`, raw: raw.slice(0, 500) }, 500);
-    }
+    // CORS toestaan voor uw frontend (GitHub)
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-    let data;
-    try {
-      data = JSON.parse(raw);
-    } catch {
-      return send({ ok: false, error: "Kon OpenAI-antwoord niet parsen", raw: raw.slice(0, 500) }, 500);
-    }
-
-    const message = data?.choices?.[0]?.message?.content;
-    if (!message) {
-      return send({ ok: false, error: "Geen geldige message in OpenAI-antwoord", data }, 500);
-    }
-
-    return send({ ok: true, message });
+    res.status(200).send(data);
   } catch (err) {
-    return send({ ok: false, error: err.message }, 500);
+    res.status(500).json({ error: err.message });
   }
+};
