@@ -1,136 +1,66 @@
-module.exports = async (req, res) => {
-  // --- CORS preflight ---
-  if (req.method === "OPTIONS") {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-    res.status(200).end();
-    return;
-  }
-
-  if (req.method !== "POST") {
-    res.status(405).json({ error: "Use POST" });
-    return;
-  }
-
+export default async function handler(req, res) {
   try {
-    // ✅ JSON-body zelf ontleden (Vercel parse’t req.body niet automatisch)
-    const bodyText = await new Promise(resolve => {
-      let data = "";
-      req.on("data", chunk => (data += chunk));
-      req.on("end", () => resolve(data));
-    });
+    // Controleer dat het een POST-request is
+    if (req.method !== "POST") {
+      return res.status(405).json({ ok: false, error: "Alleen POST is toegestaan" });
+    }
 
-    const { imageBase64, description } = JSON.parse(bodyText || "{}");
-    if (!imageBase64) throw new Error("Geen afbeelding ontvangen.");
-    if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY ontbreekt in Vercel.");
+    // Lees de request body
+    const body = await req.json ? await req.json() : JSON.parse(await req.text());
 
-    // --- Prompt voor consistente JSON-output ---
-    const prompt = `
-Je krijgt een foto van een maaltijd en optioneel een korte beschrijving.
-BEPAAL de koolhydraten per onderdeel en geef ALLEEN JSON terug met dit schema:
+    // Controleer op model en berichten
+    if (!body || !body.messages) {
+      return res.status(400).json({ ok: false, error: "Ongeldige aanvraagstructuur" });
+    }
 
-{
-  "items": [
-    { "label": "Frietjes", "grams": 40 },
-    { "label": "Steak", "grams": 0 },
-    { "label": "Saus", "grams": 2 },
-    { "label": "Salade", "grams": 3 }
-  ],
-  "notes": "Korte opmerking indien nuttig (max 1 zin)."
-}
-
-Regels:
-- label kort en NL.
-- grams = één getal in gram (integer of 1 decimaal). GEEN range; als de analyse een range geeft, kies de BOVENSTE waarde.
-- Tel geen niet-koolhydraat-onderdelen mee (vlees e.d. vaak 0 g).
-- Geen extra tekst buiten het JSON-object.
-`;
-
-    // --- OpenAI-aanroep ---
-    const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+    // Stuur door naar OpenAI API
+    const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
-        temperature: 0,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: "Je bent een strikte parser die alleen geldig JSON retourneert." },
-          { role: "user", content: prompt },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: description || "" },
-              // 🔁 Belangrijk: vision payload zoals je werkende variant vroeger
-              { type: "image_url", image_url: { url: imageBase64 } }
-            ]
-          }
-        ],
+        model: body.model || "gpt-4o-mini",
+        messages: body.messages,
+        temperature: 0.5,
+        response_format: { type: "json_object" }, // Vraag altijd JSON terug
       }),
     });
 
-    // ↪️ Heldere foutmelding bij API-fout
-    if (!openaiRes.ok) {
-      const errText = await openaiRes.text();
-      throw new Error(`OpenAI ${openaiRes.status}: ${errText}`);
-    }
+    const rawText = await openAIResponse.text();
 
-    const openaiJson = await openaiRes.json();
-    const raw = openaiJson?.choices?.[0]?.message?.content ?? "{}";
+    // 🔍 Log alles wat we ontvangen hebben
+    console.log("DEBUG OpenAI-response:", rawText.slice(0, 500)); // alleen eerste 500 tekens
 
-    // --- Veilig parsen ---
-    let parsed;
+    let data;
     try {
-      parsed = JSON.parse(raw);
-    } catch {
-      parsed = { items: [], notes: "" };
+      data = JSON.parse(rawText);
+    } catch (e) {
+      console.warn("⚠️ Kon JSON niet parsen:", e.message);
+      return res.status(500).json({
+        ok: false,
+        error: "OpenAI antwoord was geen geldige JSON",
+        raw: rawText.slice(0, 300),
+      });
     }
 
-    // --- Normaliseren ---
-    let items = Array.isArray(parsed.items) ? parsed.items : [];
-    items = items
-      .map(it => ({
-        label: String(it.label || "").trim() || "Onbekend",
-        grams: Number(it.grams),
-      }))
-      .filter(it => Number.isFinite(it.grams) && it.grams >= 0);
+    // Controleer of we een geldige message hebben
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      return res.status(500).json({
+        ok: false,
+        error: "Geen geldige message in OpenAI antwoord",
+        debug: data,
+      });
+    }
 
-    const total = items.reduce((s, it) => s + it.grams, 0);
-
-    // --- Gebruikersvriendelijke tekst maken (voor je grijze analysevak)
-    const lines = [];
-    lines.push("Hier is een schatting van het aantal koolhydraten per onderdeel:");
-    items.forEach((it, idx) => {
-      lines.push(`${idx + 1}. **${it.label}**: ongeveer ${it.grams} gram koolhydraten`);
-    });
-    lines.push("");
-    lines.push("### Totaal:");
-    items.forEach(it => lines.push(`- **${it.label}**: ${it.grams} g`));
-    lines.push("");
-    lines.push(`**Totaal koolhydraten**: **${total.toFixed(1)} g**`);
-    if (parsed.notes) lines.push(`\n> ${String(parsed.notes).trim()}`);
-
-    const humanText = lines.join("\n");
-
-    // --- CORS toestaan voor frontend ---
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-    // --- JSON-resultaat naar frontend ---
+    // ✅ Alles ok
     res.status(200).json({
       ok: true,
-      items,
-      total,
-      text: humanText,
+      message: data.choices[0].message.content,
     });
   } catch (err) {
-    console.error("Proxyfout:", err);
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.status(500).json({ error: err.message });
+    console.error("💥 Proxyfout:", err);
+    res.status(500).json({ ok: false, error: err.message });
   }
-};
+}
