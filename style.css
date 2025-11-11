@@ -286,5 +286,37 @@ footer {
   .footer-card .disclaimer { font-size: 13px; }
 }
 
+/* ---------- SAMENVATTING PERCENTAGES ---------- */
+.summary-box {
+  margin: 10px 15px 0 15px;
+  padding: 10px 12px;
+  background: #f8fbff;
+  border: 1px solid #dce9f9;
+  border-radius: 8px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.summary-box h4 {
+  margin: 0 0 6px 0;
+  font-size: 16px;
+  color: #0b65b1;
+}
+
+.summary-box ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.summary-box li {
+  margin: 2px 0;
+}
+
+.summary-box li.red {
+  color: #d00;
+  font-weight: 600;
+}
+
+
 
 

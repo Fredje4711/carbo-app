@@ -253,35 +253,58 @@ Gebruik duidelijke opsomming en totaal. Beschrijving gebruiker: ${description.va
   try {
     const response = await fetch("https://carbo-app.vercel.app/api/proxy", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "user",
-            content: [
-  { type: "text", text: prompt },
-  { type: "image_url", image_url: { url: currentImageData } }
-]
-
-          }
-        ]
+        imageBase64: currentImageData,
+        description: description.value || ""
       })
     });
 
     if (!response.ok) throw new Error(`API-fout: ${response.status}`);
 
     const data = await response.json();
-    const answer = data.choices?.[0]?.message?.content?.trim() || "Geen antwoord ontvangen.";
-    resultText.textContent = answer;
+
+    if (!data.ok) {
+      throw new Error("Onverwacht antwoord van de server.");
+    }
+
+    // 1️⃣ Toon analyse in het grijze vak
+    resultText.innerHTML = data.text || "Geen analyse uitgevoerd.";
+
+    // 2️⃣ Samenvatting onderaan tonen
+    const items = Array.isArray(data.items) ? data.items : [];
+    const total = Number(data.total) || items.reduce((s, it) => s + it.grams, 0);
+    const summaryBox = document.getElementById("summaryBox");
+
+    if (summaryBox && items.length > 0 && total > 0) {
+      const maxGrams = Math.max(...items.map(i => i.grams));
+
+      let html = `<h4>Samenvatting</h4><ul style="list-style:none;padding-left:0;margin:0;">`;
+      for (const it of items) {
+        const pct = Math.round((it.grams / total) * 100);
+        const isMax = it.grams === maxGrams;
+        html += `<li style="${isMax ? 'color:#d60000;font-weight:700' : ''}">
+          ${it.label}: ${it.grams} g koolhydraten of ${pct}%
+        </li>`;
+      }
+      html += `</ul><p><b>Totaal:</b> ${total.toFixed(1)} g</p>`;
+      summaryBox.innerHTML = html;
+    } else if (summaryBox) {
+      summaryBox.innerHTML = "";
+    }
+
+    // 3️⃣ Informatieve voetnoot
+    resultText.innerHTML += `
+      <p style="margin-top:10px;font-size:0.9em;color:#555;">
+        De resultaten zijn schattingen, afhankelijk van de duidelijkheid van de foto en eventuele beschrijving.
+      </p>`;
 
   } catch (err) {
     resultText.textContent = "❌ Fout bij analyse: " + err.message;
   }
 });
+
+
 
 // ---------- Popup "Meer uitleg…" ----------
 const infoLink = document.getElementById("infoLink");
@@ -328,6 +351,9 @@ if (resetBtn) {
     if (resultText) {
       resultText.textContent = "Nog geen analyse uitgevoerd.";
     }
+	
+	document.getElementById("summaryBox").innerHTML = "";
+
 
     // eventueel scroll naar boven
     window.scrollTo({ top: 0, behavior: "smooth" });
