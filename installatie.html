@@ -190,13 +190,10 @@
       const note = document.getElementById('no-install-available');
 
       if (!deferredPrompt) {
-        // Geen prompt beschikbaar (nog niet klaar of recent geweigerd)
         if (note) {
-          note.textContent = 'De installatie-optie is nu even niet beschikbaar. ' +
-                             'Sluit deze pagina en open ze later opnieuw om de app te installeren.';
+          note.textContent =
+            'Drukte u per ongeluk op "Annuleren" of ging er iets mis? Geen probleem — sluit deze pagina volledig af, wacht een paar minuten en open daarna opnieuw de installatie-link vanuit uw e-mail. Dan krijgt u opnieuw de kans om de app te installeren.';
           note.style.display = 'block';
-        } else {
-          alert('De installatie-optie is nu even niet beschikbaar. Probeer later opnieuw.');
         }
         return;
       }
@@ -208,13 +205,14 @@
 
         if (choiceResult.outcome === 'accepted') {
           if (note) {
-            note.textContent = 'Bedankt! De app is geïnstalleerd. Je vindt ze nu op je startscherm.';
+            note.textContent =
+              'Bedankt! De app is geïnstalleerd. U vindt ze nu terug op uw startscherm.';
             note.style.display = 'block';
           }
         } else {
           if (note) {
-            note.textContent = 'Geen probleem. Je kunt de app altijd later nog installeren ' +
-                               'door deze pagina opnieuw te openen.';
+            note.textContent =
+              'Geen probleem. U kunt de app later altijd nog installeren door deze pagina opnieuw te openen via uw e-mail.';
             note.style.display = 'block';
           }
         }
@@ -234,107 +232,111 @@
     });
   </script>
 </head>
+
 <body>
 
-  <header>
-    <h1>🍽️ Koolhydraten Scanner</h1>
-    <p style="margin:0.2rem 0 0.5rem;">Uitleg & installatie op je smartphone</p>
-  </header>
+<header>
+  <h1>🍽️ Koolhydraten Scanner</h1>
+  <p style="margin:0.2rem 0 0.5rem;">Uitleg & installatie op uw smartphone</p>
+</header>
 
-  <main id="install-page">
+<main id="install-page">
 
-    <section class="install-card">
-      <h2>Hoe wil je de app gebruiken?</h2>
+  <section class="install-card">
+    <h2>Hoe wilt u de app gebruiken?</h2>
 
-      <div class="install-flex">
-        <div>
-          <h3>1️⃣ Onmiddellijk uitproberen (in de browser)</h3>
+    <div class="install-flex">
+      <div>
+        <h3>1️⃣ Eerst even proberen (werkt onmiddellijk)</h3>
+        <p>
+          U kunt de app meteen gebruiken in uw browser zonder installatie.
+          Ideaal om even te testen of alles naar wens werkt.
+        </p>
+        <div class="install-cta">
+          <a href="index.html" class="btn-secondary">App openen zonder installatie</a>
+        </div>
+      </div>
+
+      <div>
+        <h3>2️⃣ De app installeren op uw smartphone</h3>
+        <p>
+          Op Android kunt u de app installeren via de knop hieronder.
+          Op iPhone verschijnt geen installatieknop — daar gebruikt u
+          <em>‘Zet op beginscherm’</em>.
+        </p>
+
+        <!-- Android-installatieblok -->
+        <div id="android-install-section" class="install-cta" style="display:none;">
+          <button id="btn-install" class="btn-main" disabled>
+            📲 App installeren op deze smartphone
+          </button>
+          <p id="no-install-available" class="device-note" style="display:none;"></p>
+        </div>
+
+        <!-- ANDROID -->
+        <div id="android-info" class="platform-info">
+          <h3>Android-smartphone gedetecteerd</h3>
+          <p>Zo installeert u de app:</p>
+          <ul>
+            <li>1️⃣ Tik op <strong>“App installeren op deze smartphone”</strong>.</li>
+            <li>2️⃣ Kies in de melding voor <strong>“Installeren”</strong>.</li>
+            <li>3️⃣ U ziet de app daarna op uw startscherm verschijnen.</li>
+          </ul>
+
+          <p class="small-muted">
+            Drukte u per ongeluk op “Annuleren” of ging er iets mis?  
+            Sluit deze pagina volledig → wacht enkele minuten →  
+            open opnieuw de installatie-link uit uw e-mail.
+          </p>
+        </div>
+
+        <!-- iPHONE -->
+        <div id="ios-info" class="platform-info">
+          <h3>iPhone of iPad gedetecteerd</h3>
           <p>
-            Je kunt de app eerst gewoon gebruiken in de browser van je toestel. 
-            Ideaal om even te testen of alles naar wens werkt.
+            Op iPhone verschijnt geen installatieknop. Dat is normaal — Apple ondersteunt
+            geen automatische installatie. Volg deze stappen:
+          </p>
+          <ul>
+            <li>1️⃣ Tik onderaan in Safari op het <strong>deel-icoontje</strong>.</li>
+            <li>2️⃣ Kies <strong>“Zet op beginscherm”</strong>.</li>
+            <li>3️⃣ Tik op <strong>“Voeg toe”</strong>.</li>
+          </ul>
+
+          <p class="small-muted">
+            Drukte u per ongeluk verkeerd of ging er iets mis?  
+            Sluit Safari volledig, open uw e-mail opnieuw en tik opnieuw op de installatie-link.
+          </p>
+        </div>
+
+        <!-- Overige toestellen -->
+        <div id="other-info" class="platform-info">
+          <h3>Dit is geen smartphone</h3>
+          <p>
+            Deze installatiepagina is bedoeld voor Android- en iPhone-smartphones.
+            U kunt de app wel gewoon gebruiken in de browser via:
           </p>
           <div class="install-cta">
             <a href="index.html" class="btn-secondary">App openen zonder installatie</a>
           </div>
-          <p class="small-muted">
-            Op smartphone kun je later altijd nog beslissen om de app te installeren.
-          </p>
         </div>
 
-        <div>
-          <h3>2️⃣ App installeren op je smartphone</h3>
-          <p>
-            Op Android kun je van deze webapp een echte app maken op je startscherm. 
-            Op iPhone werk je via <em>“Zet op beginscherm”</em>.
-          </p>
-
-          <!-- Android-installatieblok -->
-          <div id="android-install-section" class="install-cta" style="display:none;">
-            <button id="btn-install" class="btn-main" disabled>
-              📲 App installeren op deze smartphone
-            </button>
-            <p id="no-install-available" class="device-note" style="display:none;">
-              De installatie-optie is nog niet beschikbaar. Even later opnieuw proberen.
-            </p>
-          </div>
-
-          <!-- Platform-specifieke uitleg -->
-          <div id="android-info" class="platform-info">
-            <h3>Android-toestel gedetecteerd</h3>
-            <p>Zo installeer je de app:</p>
-            <ul>
-              <li>1️⃣ Klik op <strong>“App installeren op deze smartphone”</strong>.</li>
-              <li>2️⃣ Bevestig in de melding <strong>“Installeren”</strong>.</li>
-              <li>3️⃣ Zoek het nieuwe icoontje op je startscherm.</li>
-            </ul>
-            <p class="small-muted">
-              Zie je geen melding? Sluit de pagina, open de link later opnieuw en probeer opnieuw.
-            </p>
-          </div>
-
-          <div id="ios-info" class="platform-info">
-            <h3>iPhone/iPad gedetecteerd</h3>
-            <p>
-              Op een iPhone wordt er geen automatische installatieknop getoond. 
-              Volg deze stappen om de app toch op het beginscherm te zetten:
-            </p>
-            <ul>
-              <li>1️⃣ Tik onderaan in Safari op het <strong>deel-icoontje</strong> (vierkant met pijltje omhoog).</li>
-              <li>2️⃣ Kies in de lijst: <strong>“Zet op beginscherm”</strong>.</li>
-              <li>3️⃣ Bevestig de naam en tik op <strong>“Voeg toe”</strong>.</li>
-            </ul>
-            <p class="small-muted">
-              Daarna vind je het icoontje van de Koolhydraten Scanner op je beginscherm, 
-              net zoals andere apps.
-            </p>
-          </div>
-
-          <div id="other-info" class="platform-info">
-            <h3>Andere omgeving gedetecteerd</h3>
-            <p>
-              Deze installatiepagina is vooral bedoeld voor Android- en iPhone-smartphones.
-              Op deze computer kun je de app gewoon in de browser gebruiken via de knop 
-              <strong>“App openen zonder installatie”</strong>.
-            </p>
-          </div>
-
-        </div>
       </div>
-    </section>
-
-    
-  </main>
-
-  <footer class="app-footer">
-    <div class="footer-card">
-      <p>© 2025 – Persoonlijk gebruik –</p>
-      <p>Ontwikkeld door Freddy Sleeuwaert.</p>
-      <p class="disclaimer">
-        Deze applicatie is bedoeld ter ondersteuning van bewustwording over koolhydraten.<br>
-        De resultaten zijn indicatief en vervangen geen professioneel medisch advies.
-      </p>
     </div>
-  </footer>
+  </section>
+
+</main>
+
+<footer class="app-footer">
+  <div class="footer-card">
+    <p>© 2025 – Persoonlijk gebruik –</p>
+    <p>Ontwikkeld door Freddy Sleeuwaert.</p>
+    <p class="disclaimer">
+      Deze applicatie ondersteunt bewustwording over koolhydraten.<br>
+      De resultaten zijn indicatief en geen medisch advies.
+    </p>
+  </div>
+</footer>
 
 </body>
 </html>
