@@ -286,5 +286,20 @@ footer {
   .footer-card .disclaimer { font-size: 13px; }
 }
 
+.credit-info {
+  margin-top: 10px;
+  text-align: center;
+  color: #444;
+  font-size: 13px;
+}
+.credit-info.low {
+  color: #d98200; /* oranje */
+}
+.credit-info.zero {
+  color: red;
+  font-weight: bold;
+}
+
+
 
 
