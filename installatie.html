@@ -124,19 +124,18 @@
   </style>
 
   <script>
-    // Service worker registreren zodat deze pagina ook als PWA wordt gezien
+    /* Service worker registreren */
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('service-worker.js')
-          .then(() => console.log('SW voor installatiepagina geregistreerd'))
-          .catch(err => console.log('SW fout op installatiepagina:', err));
+          .then(() => console.log('SW geregistreerd op installatiepagina'))
+          .catch(err => console.log('SW fout:', err));
       });
     }
 
     let deferredPrompt = null;
 
     window.addEventListener('beforeinstallprompt', (e) => {
-      console.log('beforeinstallprompt event ontvangen');
       e.preventDefault();
       deferredPrompt = e;
 
@@ -163,25 +162,21 @@
       const note         = document.getElementById('no-install-available');
 
       if (isAndroid) {
-        if (androidInfo) androidInfo.style.display = 'block';
-        if (iosInfo) iosInfo.style.display = 'none';
-        if (otherInfo) otherInfo.style.display = 'none';
-        if (androidBlock) androidBlock.style.display = 'block';
-        if (note) note.style.display = 'block';
+        androidInfo.style.display = 'block';
+        iosInfo.style.display = 'none';
+        otherInfo.style.display = 'none';
+        androidBlock.style.display = 'block';
+        note.style.display = 'block';
       } else if (isIOS) {
-        if (iosInfo) iosInfo.style.display = 'block';
-        if (androidInfo) androidInfo.style.display = 'none';
-        if (otherInfo) otherInfo.style.display = 'none';
-        // Op iOS heeft de knop geen zin -> verbergen
-        if (androidBlock) androidBlock.style.display = 'none';
-        if (note) note.style.display = 'none';
+        iosInfo.style.display = 'block';
+        androidInfo.style.display = 'none';
+        otherInfo.style.display = 'none';
+        androidBlock.style.display = 'none';
       } else {
-        if (otherInfo) otherInfo.style.display = 'block';
-        if (iosInfo) iosInfo.style.display = 'none';
-        if (androidInfo) androidInfo.style.display = 'none';
-        // Op desktop is installatie minder relevant
-        if (androidBlock) androidBlock.style.display = 'none';
-        if (note) note.style.display = 'none';
+        otherInfo.style.display = 'block';
+        iosInfo.style.display = 'none';
+        androidInfo.style.display = 'none';
+        androidBlock.style.display = 'none';
       }
     }
 
@@ -190,45 +185,35 @@
       const note = document.getElementById('no-install-available');
 
       if (!deferredPrompt) {
-        if (note) {
-          note.textContent =
-            'Drukte u per ongeluk op "Annuleren" of ging er iets mis? Geen probleem — sluit deze pagina volledig af, wacht een paar minuten en open daarna opnieuw de installatie-link vanuit uw e-mail. Dan krijgt u opnieuw de kans om de app te installeren.';
-          note.style.display = 'block';
-        }
+        note.textContent =
+          'Drukte u per ongeluk op "Annuleren" of ging er iets mis? Geen probleem — sluit deze pagina volledig, wacht een paar minuten en open opnieuw de installatie-link vanuit uw e-mail. Dan krijgt u opnieuw de kans om te installeren.';
+        note.style.display = 'block';
         return;
       }
 
       try {
         deferredPrompt.prompt();
-        const choiceResult = await deferredPrompt.userChoice;
-        console.log('Installatiekeuze:', choiceResult.outcome);
+        const choice = await deferredPrompt.userChoice;
 
-        if (choiceResult.outcome === 'accepted') {
-          if (note) {
-            note.textContent =
-              'Bedankt! De app is geïnstalleerd. U vindt ze nu terug op uw startscherm.';
-            note.style.display = 'block';
-          }
+        if (choice.outcome === 'accepted') {
+          note.textContent =
+            'Bedankt! De app is geïnstalleerd. U vindt ze terug bij uw apps, meestal op het laatste app-venster.';
+          note.style.display = 'block';
         } else {
-          if (note) {
-            note.textContent =
-              'Geen probleem. U kunt de app later altijd nog installeren door deze pagina opnieuw te openen via uw e-mail.';
-            note.style.display = 'block';
-          }
+          note.textContent =
+            'Geen probleem. U kunt later altijd opnieuw installeren door deze pagina opnieuw te openen via uw e-mail.';
+          note.style.display = 'block';
         }
       } finally {
         deferredPrompt = null;
-        if (installButton) installButton.disabled = true;
+        installButton.disabled = true;
       }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
       detectPlatform();
-
-      const installButton = document.getElementById('btn-install');
-      if (installButton) {
-        installButton.addEventListener('click', handleInstallClick);
-      }
+      document.getElementById('btn-install')
+        ?.addEventListener('click', handleInstallClick);
     });
   </script>
 </head>
@@ -260,12 +245,12 @@
       <div>
         <h3>2️⃣ De app installeren op uw smartphone</h3>
         <p>
-          Op Android kunt u de app installeren via de knop hieronder.
+          Op Android kunt u de app installeren via de knop hieronder.  
           Op iPhone verschijnt geen installatieknop — daar gebruikt u
           <em>‘Zet op beginscherm’</em>.
         </p>
 
-        <!-- Android-installatieblok -->
+        <!-- ANDROID INSTALL -->
         <div id="android-install-section" class="install-cta" style="display:none;">
           <button id="btn-install" class="btn-main" disabled>
             📲 App installeren op deze smartphone
@@ -273,29 +258,29 @@
           <p id="no-install-available" class="device-note" style="display:none;"></p>
         </div>
 
-        <!-- ANDROID -->
+        <!-- ANDROID INFO -->
         <div id="android-info" class="platform-info">
           <h3>Android-smartphone gedetecteerd</h3>
           <p>Zo installeert u de app:</p>
           <ul>
             <li>1️⃣ Tik op <strong>“App installeren op deze smartphone”</strong>.</li>
             <li>2️⃣ Kies in de melding voor <strong>“Installeren”</strong>.</li>
-            <li>3️⃣ U ziet de app daarna op uw startscherm verschijnen.</li>
+            <li>3️⃣ De app verschijnt daarna tussen uw andere apps (meestal op het laatste app-venster).</li>
           </ul>
 
           <p class="small-muted">
             Drukte u per ongeluk op “Annuleren” of ging er iets mis?  
             Sluit deze pagina volledig → wacht enkele minuten →  
-            open opnieuw de installatie-link uit uw e-mail.
+            open opnieuw de installatie-link via uw e-mail.
           </p>
         </div>
 
-        <!-- iPHONE -->
+        <!-- iPHONE INFO -->
         <div id="ios-info" class="platform-info">
           <h3>iPhone of iPad gedetecteerd</h3>
           <p>
-            Op iPhone verschijnt geen installatieknop. Dat is normaal — Apple ondersteunt
-            geen automatische installatie. Volg deze stappen:
+            Op iPhone verschijnt geen installatieknop. Apple ondersteunt dit niet.  
+            Volg deze stappen om de app toch te installeren:
           </p>
           <ul>
             <li>1️⃣ Tik onderaan in Safari op het <strong>deel-icoontje</strong>.</li>
@@ -304,17 +289,17 @@
           </ul>
 
           <p class="small-muted">
-            Drukte u per ongeluk verkeerd of ging er iets mis?  
-            Sluit Safari volledig, open uw e-mail opnieuw en tik opnieuw op de installatie-link.
+            Ging er iets mis? Sluit Safari volledig, open uw e-mail opnieuw,  
+            en tik opnieuw op de link.
           </p>
         </div>
 
-        <!-- Overige toestellen -->
+        <!-- ANDERE APPARATEN -->
         <div id="other-info" class="platform-info">
           <h3>Dit is geen smartphone</h3>
           <p>
-            Deze installatiepagina is bedoeld voor Android- en iPhone-smartphones.
-            U kunt de app wel gewoon gebruiken in de browser via:
+            Deze installatiepagina is bedoeld voor Android- en iPhone-smartphones.  
+            U kunt de app wel gewoon gebruiken via de browser:
           </p>
           <div class="install-cta">
             <a href="index.html" class="btn-secondary">App openen zonder installatie</a>
