@@ -309,6 +309,10 @@ if (infoLink && infoPopup && closePopup) {
 const resetBtn = document.getElementById("resetBtn");
 if (resetBtn) {
   resetBtn.addEventListener("click", () => {
+
+    // ❗️BELANGRIJK: interne fotogegevens volledig leegmaken
+    currentImageData = null;
+
     // wis afbeelding
     const preview = document.getElementById("preview");
     if (preview) preview.src = "";
@@ -333,6 +337,106 @@ if (resetBtn) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 }
+
+// -----------------------------
+//  CREDITSYSTEEM (50 scans)
+// -----------------------------
+let maxCredits = 50;
+
+// Credits laden
+function loadCredits() {
+  let c = localStorage.getItem("carbo_credits");
+  if (c === null) {
+    localStorage.setItem("carbo_credits", maxCredits);
+    return maxCredits;
+  }
+  return parseInt(c, 10);
+}
+
+// Credits opslaan
+function saveCredits(v) {
+  localStorage.setItem("carbo_credits", v);
+}
+
+// Teller updaten
+function updateCreditDisplay() {
+  const box = document.getElementById("creditCount");
+  const wrapper = document.getElementById("creditBox");
+  const info = document.getElementById("creditInfo");
+  if (!box || !wrapper || !info) return;
+
+  let c = loadCredits();
+  box.textContent = c;
+
+  // kleur
+  wrapper.style.color = (c === 0) ? "red" :
+                        (c <= 10 ? "#d98200" : "black");
+
+  // melding onder resultaat
+  if (c === 0) {
+    info.textContent = "⛔ Je gratis scans zijn opgebruikt. Contacteer Freddy om verder te gebruiken.";
+    info.className = "credit-info zero";
+  } else if (c <= 10) {
+    info.textContent = "⚠️ Je hebt nog " + c + " scans over.";
+    info.className = "credit-info low";
+  } else {
+    info.textContent = "ℹ️ Elke analyse verbruikt 1 gratis credit. Je kreeg 50 gratis.";
+    info.className = "credit-info";
+  }
+}
+
+// 1 credit verbruiken per analyse
+function useCredit() {
+  let c = loadCredits();
+  if (c <= 0) return false;
+  c--;
+  saveCredits(c);
+  updateCreditDisplay();
+  return true;
+}
+
+// Voor analyse eerst credits checken
+function checkCreditBeforeAnalysis() {
+  let c = loadCredits();
+  if (c <= 0) {
+    alert("⛔ Je gratis scans zijn opgebruikt. Contacteer Freddy om verder te gebruiken.");
+    return false;
+  }
+  return true;
+}
+
+// -----------------------------
+//  ANALYSE-KNOP WRAPPEN
+// -----------------------------
+analyzeButton.addEventListener("click", async (event) => {
+
+  // 1. eerst checken of we een foto hebben
+  if (!currentImageData) {
+    alert("Maak of kies eerst een foto.");
+    event.stopImmediatePropagation();
+    return;
+  }
+
+  // 2. dan pas credits checken
+  if (!checkCreditBeforeAnalysis()) {
+    event.stopImmediatePropagation();
+    return;
+  }
+
+  // 3. dan pas credits verminderen
+  if (!useCredit()) {
+    event.stopImmediatePropagation();
+    return;
+  }
+
+  // → daarna mag de analyse doorgaan zoals normaal
+}, { capture: true });
+
+
+// Initialiseren
+updateCreditDisplay();
+
+
 
 }); // sluit DOMContentLoaded
 
