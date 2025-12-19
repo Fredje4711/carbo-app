@@ -5,325 +5,258 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Koolhydraten Scanner – Installatie</title>
 
-  <!-- Zelfde stijl als de app -->
-  <link rel="stylesheet" href="style.css">
-
-  <!-- PWA-koppeling -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2c7be5">
-
   <style>
-    /* Extra styling specifiek voor deze pagina */
+    body { 
+      font-family: Arial, sans-serif; 
+      line-height: 1.4; 
+      color: #333; 
+      margin: 0; 
+      background-color: #f4f7f9; 
+    }
+    
+    header { 
+      background: #2c7be5; 
+      color: white; 
+      padding: 0.5rem 1rem; 
+      text-align: center; 
+    }
+    header h1 { margin: 0; font-size: 1.4rem; }
+    header p { margin: 0; font-size: 0.8rem; opacity: 0.9; }
 
-    main#install-page {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 0.75rem 0.75rem 2rem;
+    main { 
+      max-width: 500px; /* Iets smaller voor betere leesbaarheid op laptop */
+      margin: 0 auto; 
+      padding: 10px; 
     }
 
-    .install-card {
+    #detection-alert {
       background: #ffffff;
-      border-radius: 12px;
-      padding: 1rem 1.25rem;
-      margin-bottom: 1rem;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-    }
-
-    .install-card h2 {
-      margin-top: 0;
+      border: 2px solid #2c7be5;
       color: #2c7be5;
-      font-size: 1.2rem;
-    }
-
-    .install-card p,
-    .install-card li {
-      font-size: 0.95rem;
-    }
-
-    .install-cta {
-      text-align: center;
-      margin: 1rem 0;
-    }
-
-    .btn-main {
-      display: inline-block;
-      background: #2c7be5;
-      color: #fff;
-      border: none;
-      border-radius: 999px;
-      padding: 0.7rem 1.4rem;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      text-decoration: none;
-    }
-
-    .btn-main:disabled {
-      opacity: 0.6;
-      cursor: default;
-    }
-
-    .btn-secondary {
-      display: inline-block;
-      margin-top: 0.5rem;
-      background: #e1e9fb;
-      color: #1b4fa8;
-      border-radius: 999px;
-      padding: 0.55rem 1.2rem;
-      font-size: 0.95rem;
-      border: none;
-      text-decoration: none;
-      cursor: pointer;
-    }
-
-    .device-note {
-      font-size: 0.9rem;
-      color: #555;
-      text-align: center;
-      margin-top: 0.5rem;
-    }
-
-    .platform-info {
-      display: none; /* wordt door JS getoond per toestel */
-      margin-top: 0.75rem;
-      background: #f5f7ff;
+      padding: 7px 12px;
       border-radius: 10px;
-      padding: 0.75rem 0.9rem;
+      text-align: center;
+      margin-bottom: 12px;
+      font-weight: bold;
+      font-size: 0.95rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
 
-    .platform-info h3 {
-      margin-top: 0;
-      margin-bottom: 0.4rem;
-      font-size: 1rem;
-      color: #2c7be5;
+    .card { 
+      background: white; 
+      border-radius: 12px; 
+      padding: 15px; 
+      margin-bottom: 12px; 
+      box-shadow: 0 3px 10px rgba(0,0,0,0.05); 
     }
 
-    .platform-info ul {
-      margin: 0.3rem 0 0.3rem 1.1rem;
-      padding: 0;
+    h2 { 
+      color: #2c7be5; 
+      margin: 0 0 8px 0; 
+      font-size: 1.1rem; 
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
+    
+    p { margin: 0 0 10px 0; font-size: 0.9rem; }
 
-    .platform-info li {
-      margin-bottom: 0.2rem;
+    .step-list { display: flex; flex-direction: column; gap: 6px; }
+    .step { 
+      display: flex; 
+      align-items: center;
+      background: #f9f9f9;
+      padding: 8px 12px;
+      border-radius: 8px;
+      gap: 12px;
     }
-
-    .small-muted {
+    .step-number { 
+      background: #2c7be5; 
+      color: white; 
+      width: 24px; 
+      height: 24px; 
+      border-radius: 50%; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      font-weight: bold; 
+      flex-shrink: 0; 
       font-size: 0.8rem;
-      color: #666;
+    }
+    .step-text { font-size: 0.88rem; line-height: 1.25; }
+
+    .btn { 
+      display: block; 
+      width: 100%; 
+      box-sizing: border-box;
+      padding: 12px; 
+      border-radius: 10px; 
+      text-decoration: none; 
+      font-weight: bold; 
+      text-align: center; 
+      font-size: 0.95rem;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-primary { background: #2c7be5; color: white; margin-top: 5px; }
+    
+    .btn-install-direct { 
+      background: #28a745; 
+      color: white; 
+      margin-bottom: 12px; 
+      display: none; 
+      border: 2px solid #1e7e34;
+    } 
+
+    .btn-outline { background: white; color: #2c7be5; border: 2px solid #2c7be5; margin-top: 8px; }
+
+    .safari-box {
+      background: #fff3cd; border: 1px solid #ffeeba; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 0.85rem; color: #856404;
     }
 
-    @media (min-width: 700px) {
-      .install-flex {
-        display: flex;
-        gap: 1rem;
-      }
-      .install-flex > div {
-        flex: 1;
-      }
-    }
+    .platform-info { display: none; }
   </style>
 
   <script>
-    /* Service worker registreren */
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js')
-          .then(() => console.log('SW geregistreerd op installatiepagina'))
-          .catch(err => console.log('SW fout:', err));
-      });
-    }
-
     let deferredPrompt = null;
+
+    function autoDetect() {
+      // 1. Reset alle weergaves naar verborgen (Harde Reset)
+      document.getElementById('info-ios').style.display = 'none';
+      document.getElementById('info-android').style.display = 'none';
+      document.getElementById('info-pc').style.display = 'none';
+      document.getElementById('android-direct-install').style.display = 'none';
+
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      const alertBox = document.getElementById('detection-alert');
+      
+      // 2. Detecteer en toon alleen de juiste sectie
+      if (/iPhone|iPad|iPod/i.test(ua)) {
+        alertBox.innerHTML = "📇 U hebt dit geopend op uw iPhone";
+        document.getElementById('info-ios').style.display = 'block';
+      } else if (/Android/i.test(ua)) {
+        alertBox.innerHTML = "📇 U hebt dit geopend op uw Android smartphone";
+        document.getElementById('info-android').style.display = 'block';
+        // Toon de knop alleen als het installatie-event al is afgevuurd
+        if (deferredPrompt) {
+            document.getElementById('android-direct-install').style.display = 'block';
+        }
+      } else {
+        alertBox.innerHTML = "💻 U hebt dit geopend op uw Computer";
+        document.getElementById('info-pc').style.display = 'block';
+      }
+    }
 
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
-
-      const installSection = document.getElementById('android-install-section');
-      const installButton  = document.getElementById('btn-install');
-      const note           = document.getElementById('no-install-available');
-
-      if (installSection && installButton) {
-        installSection.style.display = 'block';
-        installButton.disabled = false;
-        if (note) note.style.display = 'none';
+      // Als we al op Android zitten, toon de knop direct
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      if (/Android/i.test(ua)) {
+        document.getElementById('android-direct-install').style.display = 'block';
       }
     });
-
-    function detectPlatform() {
-      const ua = navigator.userAgent || navigator.vendor || window.opera;
-      const isAndroid = /Android/i.test(ua);
-      const isIOS = /iPhone|iPad|iPod/i.test(ua);
-
-      const iosInfo      = document.getElementById('ios-info');
-      const androidInfo  = document.getElementById('android-info');
-      const otherInfo    = document.getElementById('other-info');
-      const androidBlock = document.getElementById('android-install-section');
-      const note         = document.getElementById('no-install-available');
-
-      if (isAndroid) {
-        androidInfo.style.display = 'block';
-        iosInfo.style.display = 'none';
-        otherInfo.style.display = 'none';
-        androidBlock.style.display = 'block';
-        note.style.display = 'block';
-      } else if (isIOS) {
-        iosInfo.style.display = 'block';
-        androidInfo.style.display = 'none';
-        otherInfo.style.display = 'none';
-        androidBlock.style.display = 'none';
-      } else {
-        otherInfo.style.display = 'block';
-        iosInfo.style.display = 'none';
-        androidInfo.style.display = 'none';
-        androidBlock.style.display = 'none';
-      }
-    }
 
     async function handleInstallClick() {
-      const installButton = document.getElementById('btn-install');
-      const note = document.getElementById('no-install-available');
-
-      if (!deferredPrompt) {
-        note.textContent =
-          'Drukte u per ongeluk op "Annuleren" of ging er iets mis? Geen probleem — sluit deze pagina volledig, wacht een paar minuten en open opnieuw de installatie-link vanuit uw e-mail. Dan krijgt u opnieuw de kans om te installeren.';
-        note.style.display = 'block';
-        return;
-      }
-
-      try {
-        deferredPrompt.prompt();
-        const choice = await deferredPrompt.userChoice;
-
-        if (choice.outcome === 'accepted') {
-          note.textContent =
-            'Bedankt! De app is geïnstalleerd. Na een paar seconden wachten vindt u ze terug bij uw apps, meestal op het laatste app-venster.';
-          note.style.display = 'block';
-        } else {
-          note.textContent =
-            'Geen probleem. U kunt later altijd opnieuw installeren door deze pagina opnieuw te openen via uw e-mail.';
-          note.style.display = 'block';
-        }
-      } finally {
-        deferredPrompt = null;
-        installButton.disabled = true;
-      }
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      deferredPrompt = null;
+      document.getElementById('android-direct-install').style.display = 'none';
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      detectPlatform();
-      document.getElementById('btn-install')
-        ?.addEventListener('click', handleInstallClick);
-    });
+    // Luister naar het laden van de pagina EN het terugkeren via de 'back' knop
+    window.addEventListener('pageshow', autoDetect);
+    window.addEventListener('load', autoDetect);
   </script>
 </head>
-
 <body>
 
 <header>
   <h1>🍽️ Koolhydraten Scanner</h1>
-  <p style="margin:0.2rem 0 0.5rem;">Uitleg & installatie op uw smartphone</p>
+  <p>Uitleg en installatie</p>
 </header>
 
-<main id="install-page">
+<main>
+  
+  <div id="detection-alert">Bezig met herkennen...</div>
 
-  <section class="install-card">
-    <h2>Hoe wilt u de app gebruiken?</h2>
+  <!-- STAP 1: DIRECT TESTEN -->
+  <div class="card">
+    <h2><span class="step-number">1</span> De scanner gebruiken</h2>
+    <p>U kunt de scanner hier direct uitproberen in uw browser. Dit is handig om snel te kijken hoe het werkt zonder iets te installeren.</p>
+    <a href="index.html" class="btn btn-primary">Open de Scanner direct</a>
+  </div>
 
-    <div class="install-flex">
-      <div>
-        <h3>1️⃣ Eerst even proberen (werkt onmiddellijk)</h3>
-        <p>
-          U kunt de app meteen gebruiken in uw browser zonder installatie.
-          Ideaal om even te testen of alles naar wens werkt.
-        </p>
-        <div class="install-cta">
-          <a href="index.html" class="btn-secondary">App openen zonder installatie</a>
-        </div>
+  <!-- STAP 2: iPHONE -->
+  <div id="info-ios" class="platform-info">
+    <div class="card">
+      <h2><span class="step-number">2</span> Installeren als App</h2>
+      <div class="safari-box">
+        <strong>Belangrijk:</strong> Gebruik de <b>Safari-browser</b> om de scanner als icoon op uw startscherm te krijgen.
       </div>
-
-      <div>
-        <h3>2️⃣ De app installeren op uw smartphone</h3>
-        <p>
-          Op Android kunt u de app installeren via de knop hieronder.  
-          Op iPhone verschijnt geen installatieknop — daar gebruikt u
-          <em>‘Zet op beginscherm’</em>.
-        </p>
-
-        <!-- ANDROID INSTALL -->
-        <div id="android-install-section" class="install-cta" style="display:none;">
-          <button id="btn-install" class="btn-main" disabled>
-            📲 App installeren op deze smartphone
-          </button>
-          <p id="no-install-available" class="device-note" style="display:none;"></p>
+      <p>Tik rechtsonder op het 🧭 <b>kompas-icoon</b> om Safari te openen. Doe daarna dit:</p>
+      
+      <div class="step-list">
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-text">Tik onderaan op het <b>Deel-icoon</b> (vierkantje met pijl omhoog ⎋).</div>
         </div>
-
-        <!-- ANDROID INFO -->
-        <div id="android-info" class="platform-info">
-          <h3>Android-smartphone gedetecteerd</h3>
-          <p>Zo installeert u de app:</p>
-          <ul>
-            <li>1️⃣ Tik op <strong>“App installeren op deze smartphone”</strong>.</li>
-            <li>2️⃣ Kies in de melding voor <strong>“Installeren”</strong>.</li>
-            <li>3️⃣ Na een paar seconden wachten verschijnt de app tussen uw andere apps (meestal op het laatste app-venster).</li>
-          </ul>
-
-          <p class="small-muted">
-            Drukte u per ongeluk op “Annuleren” of ging er iets mis?  
-            Sluit deze pagina volledig → wacht enkele minuten →  
-            open opnieuw de installatie-link via uw e-mail.
-          </p>
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-text">Kies in de lijst voor de optie <b>"Zet op beginscherm"</b>.</div>
         </div>
-
-        <!-- iPHONE INFO -->
-        <div id="ios-info" class="platform-info">
-          <h3>iPhone of iPad gedetecteerd</h3>
-          <p>
-            Op iPhone verschijnt geen installatieknop. Apple ondersteunt dit niet.  
-            Volg deze stappen om de app toch te installeren:
-          </p>
-          <ul>
-            <li>1️⃣ Tik onderaan in Safari op het <strong>deel-icoontje</strong>.</li>
-            <li>2️⃣ Kies <strong>“Zet op beginscherm”</strong>.</li>
-            <li>3️⃣ Tik op <strong>“Voeg toe”</strong>.</li>
-          </ul>
-
-          <p class="small-muted">
-            Ging er iets mis? Sluit Safari volledig, open uw e-mail opnieuw,  
-            en tik opnieuw op de link.
-          </p>
+        <div class="step">
+          <div class="step-number">3</div>
+          <div class="step-text">Tik rechtsboven op <b>"Voeg toe"</b> om te voltooien.</div>
         </div>
-
-        <!-- ANDERE APPARATEN -->
-        <div id="other-info" class="platform-info">
-          <h3>Dit is geen smartphone</h3>
-          <p>
-            Deze installatiepagina is bedoeld voor Android- en iPhone-smartphones.  
-            U kunt de app wel gewoon gebruiken via de browser:
-          </p>
-          <div class="install-cta">
-            <a href="index.html" class="btn-secondary">App openen zonder installatie</a>
-          </div>
-        </div>
-
       </div>
     </div>
-  </section>
+  </div>
+
+  <!-- STAP 2: ANDROID -->
+  <div id="info-android" class="platform-info">
+    <div class="card">
+      <h2><span class="step-number">2</span> Installeren als App</h2>
+      
+      <button id="android-direct-install" class="btn btn-install-direct" onclick="handleInstallClick()">
+        📲 Nu installeren op dit toestel
+      </button>
+
+      <p>Verschijnt de groene knop hierboven niet? Volg dan deze stappen:</p>
+      
+      <div class="step-list">
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-text">Tik rechtsboven op de <b>drie puntjes (⋮)</b>.</div>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-text">Tik op <b>"App installeren"</b> of <b>"Toevoegen aan startscherm"</b>.</div>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <div class="step-text">Bevestig de installatie door op <b>"Installeren"</b> te tikken.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAP 2: COMPUTER -->
+  <div id="info-pc" class="platform-info">
+    <div class="card">
+      <h2><span class="step-number">2</span> Wilt u dit toch als een app installeren op uw Smartphone?</h2>
+      <p>De scanner is vooral bedoeld voor gebruik op een smartphone. Zo heeft u hem altijd bij de hand in de winkel of aan tafel.</p>
+      <p><b>Tip:</b> Stuur de e-mail met deze link door naar uw eigen e-mailadres en open de link op uw smartphone om de app daar te installeren.</p>
+      <a href="index.html" class="btn btn-outline">Toch openen op deze computer</a>
+    </div>
+  </div>
 
 </main>
 
-<footer class="app-footer">
-  <div class="footer-card">
-    <p>© 2025 – Persoonlijk gebruik –</p>
-    <p>Ontwikkeld door Freddy Sleeuwaert.</p>
-    <p class="disclaimer">
-      Deze applicatie ondersteunt bewustwording over koolhydraten.<br>
-      De resultaten zijn indicatief en geen medisch advies.
-    </p>
-  </div>
+<footer style="text-align:center; padding-bottom: 20px; color: #888; font-size: 0.7rem;">
+  © 2025 – Freddy Sleeuwaert<br>
+  <i>Voor persoonlijk gebruik en bewustwording.</i>
 </footer>
 
 </body>
 </html>
-
-
