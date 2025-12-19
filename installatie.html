@@ -41,13 +41,19 @@
       padding: 0.8rem; font-size: 1rem; font-weight: bold; cursor: pointer; margin-bottom: 10px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
+    /* Voorkom dat de knop blauw wordt bij het klikken */
+    .android-install-btn:active { background: #1e7e34; outline: none; }
 
     .btn-primary { display: block; background: #2c7be5; color: white; border-radius: 999px; padding: 0.8rem; text-align: center; text-decoration: none; font-weight: bold; margin-top: 5px; }
-    .btn-outline { display: block; border: 2px solid #2c7be5; color: #2c7be5; border-radius: 999px; padding: 0.7rem; text-decoration: none; text-align: center; font-weight: bold; }
+    .btn-outline { display: block; border: 2px solid #2c7be5; color: #2c7be5; border-radius: 999px; padding: 0.7rem; text-decoration: none; text-align: center; font-weight: bold; margin-top: 10px; }
 
     .safari-box { background: #fff3cd; border: 1px solid #ffeeba; padding: 12px; border-radius: 8px; margin-bottom: 12px; font-size: 0.85rem; color: #856404; }
     
     .wait-note { color: #d9534f; font-weight: bold; font-size: 0.85rem; margin: 0 0 15px; text-align: center; display: block; }
+
+    /* STIJL VOOR VERWIJDER-INFO */
+    .removal-info { margin-top: 15px; padding-top: 10px; border-top: 1px dashed #ccc; font-size: 0.85rem; color: #666; }
+    .removal-info summary { cursor: pointer; color: #2c7be5; font-weight: bold; margin-bottom: 5px; }
 
     .maker-panel { margin-top: 30px; padding: 10px; background: #eee; border-radius: 10px; text-align: center; border: 1px dashed #999; }
     .maker-btns { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
@@ -73,14 +79,18 @@
     });
 
     async function handleInstallClick() {
-      if (!deferredPrompt) return;
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        document.getElementById('btn-install-android').style.display = 'none';
-        alert("De installatie is gestart. Wacht a.u.b. 5 seconden voordat u tussen uw apps gaat kijken naar het nieuwe icoontje.");
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          document.getElementById('btn-install-android').style.display = 'none';
+          alert("De installatie is gestart. Wacht a.u.b. 5 seconden voordat u tussen uw apps gaat kijken naar het nieuwe icoontje.");
+        }
+        deferredPrompt = null;
+      } else {
+        // Melding als de app al op de gsm staat of de browser de knop blokkeert
+        alert("Het lijkt erop dat de app al op uw toestel staat (of uw mail-app blokkeert de directe installatie). \n\nKijk tussen uw andere apps naar de 'Koolhydraten Scanner'.");
       }
-      deferredPrompt = null;
     }
 
     function showPlatform(type) {
@@ -156,6 +166,14 @@
           <div class="step-text">Bevestig door op <b>"Installeren"</b> te tikken en wacht 5 seconden tot de app op uw scherm verschijnt.</div>
         </div>
       </div>
+
+      <!-- VERWIJDER INFO ANDROID -->
+      <div class="removal-info">
+        <details>
+          <summary>Hoe verwijder ik de app?</summary>
+          Houd op uw startscherm het icoontje van de Scanner lang ingedrukt met uw vinger. Kies daarna voor <b>'Verwijderen'</b> of tik op het prullenbakje.
+        </details>
+      </div>
     </div>
   </div>
 
@@ -179,12 +197,19 @@
         </div>
         <div class="step">
           <div class="step-number">3</div>
-		  <div class="step-text">
-  Tik rechtsboven op <b>"Voeg toe"</b>. Safari sluit nu en de app verschijnt op uw startscherm.
-  <span style="color:red;">⚠️ Wacht een paar seconden....</span>
-</div>
-
+          <div class="step-text">
+            Tik rechtsboven op <b>"Voeg toe"</b>. Safari sluit nu en de app verschijnt op uw startscherm.
+            <span style="color:red;">⚠️ Wacht een paar seconden....</span>
+          </div>
         </div>
+      </div>
+
+      <!-- VERWIJDER INFO iPHONE -->
+      <div class="removal-info">
+        <details>
+          <summary>Hoe verwijder ik de app?</summary>
+          Houd het icoontje van de Scanner op uw scherm lang ingedrukt. Tik op <b>'Verwijder app'</b> en bevestig dit nogmaals.
+        </details>
       </div>
     </div>
   </div>
