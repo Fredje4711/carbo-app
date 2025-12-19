@@ -30,7 +30,6 @@
     .btn { display: block; width: 100%; box-sizing: border-box; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; text-align: center; font-size: 0.95rem; border: none; cursor: pointer; }
     .btn-primary { background: #2c7be5; color: white; margin-top: 5px; }
     
-    /* GROENE KNOP - Nu standaard zichtbaar op Android */
     .btn-install-direct { 
       background: #28a745; color: white; margin-bottom: 15px; border: 2px solid #1e7e34;
       box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
@@ -39,6 +38,14 @@
     .btn-outline { background: white; color: #2c7be5; border: 2px solid #2c7be5; margin-top: 8px; }
     .safari-box { background: #fff3cd; border: 1px solid #ffeeba; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 0.85rem; color: #856404; }
     .platform-info { display: none; }
+
+    /* Kleine animatie om naar de stappen te wijzen */
+    @keyframes highlight {
+      0% { background: #f9f9f9; }
+      50% { background: #d4edda; }
+      100% { background: #f9f9f9; }
+    }
+    .flash { animation: highlight 1.5s ease-in-out; }
   </style>
 
   <script>
@@ -72,11 +79,20 @@
     async function handleInstallClick() {
       if (deferredPrompt) {
         deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
+        await deferredPrompt.userChoice;
         deferredPrompt = null;
       } else {
-        // Als de browser er nog niet klaar voor is, geef een tip
-        alert("De automatische installatie wordt voorbereid door uw browser. Als er niets gebeurt, volg dan de 3 korte stappen hieronder.");
+        // Indien in-app browser (zoals Gmail), scrol naar handmatige stappen
+        const manualSection = document.getElementById('manual-steps-android');
+        manualSection.scrollIntoView({ behavior: 'smooth' });
+        
+        // Laat de stapjes even knipperen om de aandacht te trekken
+        document.querySelectorAll('.step').forEach(step => {
+          step.classList.add('flash');
+          setTimeout(() => step.classList.remove('flash'), 1500);
+        });
+
+        alert("Uw mail-app blokkeert de directe knop. Gebruik daarom de 3 korte stappen hieronder (via de puntjes rechtsboven).");
       }
     }
 
@@ -122,21 +138,22 @@
     <div class="card">
       <h2><span class="step-number">2</span> Installeren als App</h2>
       
-      <!-- GROENE KNOP IS NU STANDAARD ZICHTBAAR -->
       <button id="android-direct-install" class="btn btn-install-direct" onclick="handleInstallClick()">
-        📲 Nu installeren op dit toestel
+        📲 Snel-installatie (indien mogelijk)
       </button>
 
-      <p>Werkt de groene knop niet direct? Volg dan deze stappen:</p>
-      <div class="step-list">
-        <div class="step"><div class="step-number">1</div><div class="step-text">Tik rechtsboven op de <b>drie puntjes (⋮)</b>.</div></div>
-        <div class="step"><div class="step-number">2</div><div class="step-text">Tik op <b>"App installeren"</b> of <b>"Toevoegen aan startscherm"</b>.</div></div>
-        <div class="step"><div class="step-number">3</div><div class="step-text">Bevestig de installatie door op <b>"Installeren"</b> te tikken.</div></div>
+      <div id="manual-steps-android">
+        <p>Lukt de groene knop niet? Volg dan deze 3 stappen:</p>
+        <div class="step-list">
+          <div class="step"><div class="step-number">1</div><div class="step-text">Tik rechtsboven op de <b>drie puntjes (⋮)</b>.</div></div>
+          <div class="step"><div class="step-number">2</div><div class="step-text">Tik op <b>"App installeren"</b> of <b>"Toevoegen aan startscherm"</b>.</div></div>
+          <div class="step"><div class="step-number">3</div><div class="step-text">Bevestig de installatie door op <b>"Installeren"</b> te tikken.</div></div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- STAP 2: PC -->
+  <!-- STAP 2: COMPUTER -->
   <div id="info-pc" class="platform-info">
     <div class="card">
       <h2><span class="step-number">2</span> Wilt u dit toch als een app installeren op uw Smartphone?</h2>
