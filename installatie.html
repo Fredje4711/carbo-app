@@ -5,58 +5,51 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Koolhydraten Scanner – Installatie</title>
 
-  <link rel="stylesheet" href="style.css">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2c7be5">
-
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.4; color: #333; margin: 0; background-color: #f4f7f9; }
     
+    /* COMPACTE HEADER ZOALS SCREENSHOT */
     header { background: #2c7be5; color: white; padding: 0.6rem 1rem; text-align: center; }
     header h1 { margin: 0; font-size: 1.5rem; }
     header p { margin: 0; font-size: 0.85rem; opacity: 0.9; }
 
     main { max-width: 550px; margin: 0 auto; padding: 10px; }
 
+    /* PERSOONLIJKE DETECTIEBALK */
     #detection-alert {
       background: #ffffff; border: 2px solid #2c7be5; color: #2c7be5; padding: 8px 15px;
       border-radius: 12px; text-align: center; margin-bottom: 12px; font-weight: bold; font-size: 1rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
     }
 
     .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 3px 10px rgba(0,0,0,0.05); }
     h2 { color: #2c7be5; margin: 0 0 8px 0; font-size: 1.15rem; display: flex; align-items: center; gap: 8px; }
     p { margin: 0 0 10px 0; font-size: 0.92rem; }
 
-    /* STAPPEN */
+    /* STAPPENLIJST MET BLAUWE NUMMERS */
     .step-list { display: flex; flex-direction: column; gap: 8px; }
     .step { display: flex; align-items: center; background: #f9f9f9; padding: 10px; border-radius: 8px; gap: 12px; }
     .step-number { background: #2c7be5; color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; font-size: 0.85rem; }
     .step-text { font-size: 0.9rem; line-height: 1.3; }
 
-    /* DE GROENE KNOP (Originele stijl uit bron) */
-    .btn-main {
-      display: inline-block; width: 100%; background: #28a745; color: #fff; border: none; border-radius: 999px;
-      padding: 0.8rem 1.4rem; font-size: 1rem; font-weight: 600; cursor: pointer; text-decoration: none; text-align: center;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    .btn-main:disabled { opacity: 0.6; cursor: default; }
+    /* KNOPPEN */
+    .btn { display: block; width: 100%; box-sizing: border-box; padding: 14px; border-radius: 10px; text-decoration: none; font-weight: bold; text-align: center; font-size: 1rem; border: none; cursor: pointer; }
+    .btn-primary { background: #2c7be5; color: white; margin-top: 5px; }
+    
+    /* DE GROENE INSTALLATIEKNOP */
+    .btn-install-direct { background: #28a745; color: white; margin-bottom: 15px; display: none; border: 2px solid #1e7e34; } 
 
-    .btn-secondary { display: block; background: #e1e9fb; color: #1b4fa8; border-radius: 999px; padding: 0.7rem; font-size: 0.95rem; text-decoration: none; text-align: center; font-weight: bold; }
-    .btn-outline { display: block; border: 2px solid #2c7be5; color: #2c7be5; border-radius: 999px; padding: 0.7rem; text-decoration: none; text-align: center; font-weight: bold; margin-top: 10px; }
-
+    .btn-outline { background: white; color: #2c7be5; border: 2px solid #2c7be5; margin-top: 10px; }
     .safari-box { background: #fff3cd; border: 1px solid #ffeeba; padding: 12px; border-radius: 8px; margin-bottom: 12px; font-size: 0.85rem; color: #856404; }
-    .device-note { font-size: 0.9rem; color: #d9534f; text-align: center; margin-top: 10px; font-weight: bold; }
     
     .platform-info { display: none; }
   </style>
 
   <script>
-    /* EXACTE LOGICA UIT UW ORIGINELE BESTAND */
+    /* Service Worker voor PWA */
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js')
-          .then(() => console.log('SW geregistreerd'))
-          .catch(err => console.log('SW fout:', err));
+        navigator.serviceWorker.register('service-worker.js').catch(err => console.log('SW fout:', err));
       });
     }
 
@@ -65,68 +58,41 @@
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
-
-      // Toon de sectie en knop zodra het systeem er klaar voor is
-      const installSection = document.getElementById('android-install-section');
-      const installButton  = document.getElementById('btn-install');
-      const note           = document.getElementById('no-install-available');
-
-      if (installSection && installButton) {
-        installSection.style.display = 'block';
-        installButton.disabled = false;
-        if (note) note.style.display = 'none';
-      }
+      const installBtn = document.getElementById('android-direct-install');
+      if (installBtn) installBtn.style.display = 'block';
     });
 
     async function handleInstallClick() {
-      const installButton = document.getElementById('btn-install');
-      const note = document.getElementById('no-install-available');
-
-      if (!deferredPrompt) {
-        note.innerHTML = 'Open deze pagina in de <b>Chrome-app</b> om direct te kunnen installeren.';
-        note.style.display = 'block';
-        return;
-      }
-
-      try {
-        deferredPrompt.prompt();
-        const choice = await deferredPrompt.userChoice;
-        if (choice.outcome === 'accepted') {
-          note.textContent = 'De app wordt nu toegevoegd aan uw beginscherm.';
-          note.style.display = 'block';
-        }
-      } finally {
-        deferredPrompt = null;
-        installButton.disabled = true;
-      }
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      document.getElementById('android-direct-install').style.display = 'none';
     }
 
-    function detectPlatform() {
+    function updateUI() {
       const ua = navigator.userAgent || navigator.vendor || window.opera;
-      const isAndroid = /Android/i.test(ua);
-      const isIOS = /iPhone|iPad|iPod/i.test(ua);
-
       const alertBox = document.getElementById('detection-alert');
       
-      if (isAndroid) {
-        alertBox.innerHTML = "📇 U hebt dit geopend op Android";
-        document.getElementById('android-info').style.display = 'block';
-      } else if (isIOS) {
-        alertBox.innerHTML = "📇 U hebt dit geopend op iPhone";
-        document.getElementById('ios-info').style.display = 'block';
+      document.getElementById('info-ios').style.display = 'none';
+      document.getElementById('info-android').style.display = 'none';
+      document.getElementById('info-pc').style.display = 'none';
+
+      if (/iPhone|iPad|iPod/i.test(ua)) {
+        alertBox.innerHTML = "📇 U hebt dit geopend op uw iPhone";
+        document.getElementById('info-ios').style.display = 'block';
+      } else if (/Android/i.test(ua)) {
+        alertBox.innerHTML = "📇 U hebt dit geopend op uw Android smartphone";
+        document.getElementById('info-android').style.display = 'block';
       } else {
         alertBox.innerHTML = "💻 U hebt dit geopend op uw Computer";
-        document.getElementById('other-info').style.display = 'block';
+        document.getElementById('info-pc').style.display = 'block';
       }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      detectPlatform();
-      document.getElementById('btn-install')?.addEventListener('click', handleInstallClick);
-    });
+    window.onload = updateUI;
   </script>
 </head>
-
 <body>
 
 <header>
@@ -137,36 +103,15 @@
 <main>
   <div id="detection-alert">Toestel herkennen...</div>
 
-  <!-- STAP 1: ALTIJD ZICHTBAAR -->
+  <!-- STAP 1 -->
   <div class="card">
     <h2><span class="step-number">1</span> De scanner gebruiken</h2>
-    <p>U kunt de scanner hier direct uitproberen in uw browser. Handig om te testen zonder iets te installeren.</p>
-    <a href="index.html" class="btn-secondary">Open de Scanner direct</a>
-  </div>
-
-  <!-- STAP 2: ANDROID (Met originele knop logica) -->
-  <div id="android-info" class="platform-info">
-    <div class="card">
-      <h2><span class="step-number">2</span> Installeren als App</h2>
-      
-      <!-- Deze sectie verschijnt pas als beforeinstallprompt vuurt -->
-      <div id="android-install-section" style="display:none; margin-bottom: 20px; text-align: center;">
-        <button id="btn-install" class="btn-main" disabled>
-          📲 App nu installeren op deze gsm
-        </button>
-      </div>
-      <p id="no-install-available" class="device-note" style="display:none;"></p>
-
-      <p>Indien de knop hierboven niet verschijnt, volg dan deze stappen:</p>
-      <div class="step-list">
-        <div class="step"><div class="step-number">1</div><div class="step-text">Tik rechtsboven op de <b>drie puntjes (⋮)</b>.</div></div>
-        <div class="step"><div class="step-number">2</div><div class="step-text">Tik op <b>"App installeren"</b> of <b>"Toevoegen aan startscherm"</b>.</div></div>
-      </div>
-    </div>
+    <p>U kunt de scanner hier direct uitproberen in uw browser. Dit is handig om snel te kijken hoe het werkt zonder iets te installeren.</p>
+    <a href="index.html" class="btn btn-primary">Open de Scanner direct</a>
   </div>
 
   <!-- STAP 2: iPHONE -->
-  <div id="ios-info" class="platform-info">
+  <div id="info-ios" class="platform-info">
     <div class="card">
       <h2><span class="step-number">2</span> Installeren als App</h2>
       <div class="safari-box">
@@ -175,21 +120,40 @@
       <p>Tik rechtsonder op het 🧭 <b>kompas-icoon</b> om Safari te openen. Doe daarna dit:</p>
       <div class="step-list">
         <div class="step"><div class="step-number">1</div><div class="step-text">Tik onderaan op het <b>Deel-icoon</b> (vierkant met pijl omhoog ⎋).</div></div>
-        <div class="step"><div class="step-number">2</div><div class="step-text">Kies in de lijst voor <b>"Zet op beginscherm"</b>.</div></div>
-        <div class="step"><div class="step-number">3</div><div class="step-text">Tik rechtsboven op <b>"Voeg toe"</b>.</div></div>
+        <div class="step"><div class="step-number">2</div><div class="step-text">Kies in de lijst voor de optie <b>"Zet op beginscherm"</b>.</div></div>
+        <div class="step"><div class="step-number">3</div><div class="step-text">Tik rechtsboven op <b>"Voeg toe"</b> om te voltooien.</div></div>
       </div>
     </div>
   </div>
 
-  <!-- STAP 2: ANDERE -->
-  <div id="other-info" class="platform-info">
+  <!-- STAP 2: ANDROID -->
+  <div id="info-android" class="platform-info">
     <div class="card">
-      <h2><span class="step-number">2</span> Gebruik op uw Smartphone</h2>
-      <p>De scanner is vooral bedoeld voor uw smartphone. Stuur deze link door naar uw gsm om de app daar te installeren.</p>
-      <a href="index.html" class="btn-outline">Toch openen op deze computer</a>
+      <h2><span class="step-number">2</span> Installeren als App</h2>
+      
+      <!-- DE GROENE KNOP -->
+      <button id="android-direct-install" class="btn" style="background:#28a745; color:white; margin-bottom:15px; display:none;" onclick="handleInstallClick()">
+        📲 Nu installeren op dit toestel
+      </button>
+
+      <p>Verschijnt de groene knop hierboven niet? Volg dan deze 3 stappen:</p>
+      <div class="step-list">
+        <div class="step"><div class="step-number">1</div><div class="step-text">Tik rechtsboven op de <b>drie puntjes (⋮)</b>.</div></div>
+        <div class="step"><div class="step-number">2</div><div class="step-text">Tik op <b>"App installeren"</b> of <b>"Toevoegen aan startscherm"</b>.</div></div>
+        <div class="step"><div class="step-number">3</div><div class="step-text">Bevestig de installatie door op <b>"Installeren"</b> te tikken.</div></div>
+      </div>
     </div>
   </div>
 
+  <!-- STAP 2: PC -->
+  <div id="info-pc" class="platform-info">
+    <div class="card">
+      <h2><span class="step-number">2</span> Wilt u dit toch als een app installeren op uw Smartphone?</h2>
+      <p>De scanner is vooral bedoeld voor gebruik op een smartphone. Zo heeft u hem altijd bij de hand in de winkel of aan tafel.</p>
+      <p><b>Tip:</b> Stuur de e-mail met deze link door naar uw eigen e-mailadres en open de link op uw smartphone om de app daar te installeren.</p>
+      <a href="index.html" class="btn btn-outline">Toch openen op deze computer</a>
+    </div>
+  </div>
 </main>
 
 <footer style="text-align:center; padding-bottom: 20px; color: #888; font-size: 0.75rem;">
