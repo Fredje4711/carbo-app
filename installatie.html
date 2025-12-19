@@ -11,15 +11,11 @@
 
   <style>
     body { font-family: Arial, sans-serif; line-height: 1.4; color: #333; margin: 0; background-color: #f4f7f9; }
-    
-    /* COMPACTE HEADER */
     header { background: #2c7be5; color: white; padding: 0.5rem 1rem; text-align: center; }
     header h1 { margin: 0; font-size: 1.4rem; }
     header p { margin: 0; font-size: 0.8rem; opacity: 0.9; }
-
     main { max-width: 550px; margin: 0 auto; padding: 10px; }
 
-    /* COMPACTE DETECTIEBALK */
     #detection-alert {
       background: #ffffff; border: 2px solid #2c7be5; color: #2c7be5; padding: 8px 15px;
       border-radius: 12px; text-align: center; margin-bottom: 12px; font-weight: bold; font-size: 0.95rem;
@@ -27,12 +23,9 @@
     }
 
     .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 3px 10px rgba(0,0,0,0.05); }
-    
-    /* TITELS */
     h2 { color: #2c7be5; margin: 0 0 8px 0; font-size: 1.15rem; display: flex; align-items: center; gap: 8px; }
     p { margin: 0 0 10px 0; font-size: 0.92rem; }
 
-    /* STAPPENLIJST UITLIJNING */
     .step-list { display: flex; flex-direction: column; gap: 8px; }
     .step { display: flex; align-items: flex-start; background: #f9f9f9; padding: 10px; border-radius: 8px; gap: 12px; }
     .step-number { 
@@ -42,11 +35,10 @@
     }
     .step-text { font-size: 0.9rem; line-height: 1.3; color: #333; }
 
-    /* DE GROENE INSTALLATIEKNOP (Identiek aan uw bron) */
     .android-install-btn {
-      display: none; /* Wordt getoond via JS */
+      display: none; 
       width: 100%; background: #28a745; color: white; border: none; border-radius: 999px;
-      padding: 0.8rem; font-size: 1rem; font-weight: bold; cursor: pointer; margin-bottom: 15px;
+      padding: 0.8rem; font-size: 1rem; font-weight: bold; cursor: pointer; margin-bottom: 10px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
 
@@ -54,11 +46,17 @@
     .btn-outline { display: block; border: 2px solid #2c7be5; color: #2c7be5; border-radius: 999px; padding: 0.7rem; text-decoration: none; text-align: center; font-weight: bold; }
 
     .safari-box { background: #fff3cd; border: 1px solid #ffeeba; padding: 12px; border-radius: 8px; margin-bottom: 12px; font-size: 0.85rem; color: #856404; }
+    
+    .wait-note { color: #d9534f; font-weight: bold; font-size: 0.85rem; margin: 0 0 15px; text-align: center; display: block; }
+
+    .maker-panel { margin-top: 30px; padding: 10px; background: #eee; border-radius: 10px; text-align: center; border: 1px dashed #999; }
+    .maker-btns { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+    .btn-maker { padding: 5px 10px; font-size: 0.75rem; cursor: pointer; background: white; border: 1px solid #ccc; border-radius: 5px; }
+
     .platform-info { display: none; }
   </style>
 
   <script>
-    /* ORIGINELE LOGICA DIE WERKT */
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('service-worker.js').catch(err => console.log('SW fout:', err));
@@ -70,7 +68,6 @@
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
-      // Toon de groene knop alleen als installatie technisch mogelijk is
       const btn = document.getElementById('btn-install-android');
       if (btn) btn.style.display = 'block';
     });
@@ -81,28 +78,36 @@
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
         document.getElementById('btn-install-android').style.display = 'none';
+        alert("De installatie is gestart. Wacht a.u.b. 5 seconden voordat u tussen uw apps gaat kijken naar het nieuwe icoontje.");
       }
       deferredPrompt = null;
     }
 
-    function detectDevice() {
-      const ua = navigator.userAgent || navigator.vendor || window.opera;
+    function showPlatform(type) {
       const alertBox = document.getElementById('detection-alert');
-      
       document.getElementById('info-ios').style.display = 'none';
       document.getElementById('info-android').style.display = 'none';
       document.getElementById('info-pc').style.display = 'none';
+      document.getElementById('btn-install-android').style.display = 'none';
 
-      if (/iPhone|iPad|iPod/i.test(ua)) {
+      if (type === 'ios') {
         alertBox.innerHTML = "📇 U hebt dit geopend op uw iPhone";
         document.getElementById('info-ios').style.display = 'block';
-      } else if (/Android/i.test(ua)) {
+      } else if (type === 'android') {
         alertBox.innerHTML = "📇 U hebt dit geopend op uw Android smartphone";
         document.getElementById('info-android').style.display = 'block';
+        document.getElementById('btn-install-android').style.display = 'block';
       } else {
         alertBox.innerHTML = "💻 U hebt dit geopend op uw Computer";
         document.getElementById('info-pc').style.display = 'block';
       }
+    }
+
+    function detectDevice() {
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      if (/iPhone|iPad|iPod/i.test(ua)) showPlatform('ios');
+      else if (/Android/i.test(ua)) showPlatform('android');
+      else showPlatform('pc');
     }
 
     window.onload = detectDevice;
@@ -133,8 +138,9 @@
       <button id="btn-install-android" class="android-install-btn" onclick="handleInstallClick()">
         📲 Nu installeren op dit toestel
       </button>
+      <span class="wait-note">⚠️ Wacht na het klikken 5 seconden voordat u tussen uw apps gaat kijken.</span>
 
-      <p>Verschijnt de groene knop hierboven niet? Volg dan deze stappen:</p>
+      <p>Verschijnt de groene knop hierboven niet? Volg dan deze 3 stappen:</p>
       
       <div class="step-list">
         <div class="step">
@@ -147,7 +153,7 @@
         </div>
         <div class="step">
           <div class="step-number">3</div>
-          <div class="step-text">Bevestig de installatie door op <b>"Installeren"</b> te tikken.</div>
+          <div class="step-text">Bevestig door op <b>"Installeren"</b> te tikken en wacht 5 seconden tot de app op uw scherm verschijnt.</div>
         </div>
       </div>
     </div>
@@ -173,7 +179,11 @@
         </div>
         <div class="step">
           <div class="step-number">3</div>
-          <div class="step-text">Tik rechtsboven op <b>"Voeg toe"</b>.</div>
+		  <div class="step-text">
+  Tik rechtsboven op <b>"Voeg toe"</b>. Safari sluit nu en de app verschijnt op uw startscherm.
+  <span style="color:red;">⚠️ Wacht een paar seconden....</span>
+</div>
+
         </div>
       </div>
     </div>
@@ -187,6 +197,16 @@
       <a href="index.html" class="btn-outline">Toch openen op deze computer</a>
     </div>
   </div>
+
+  <!-- MAKER PANEEL 
+  <div class="maker-panel">
+    <p style="margin:0; font-size:0.8rem; color: #666;"><b>Maker-weergave:</b></p>
+    <div class="maker-btns">
+      <button class="btn-maker" onclick="showPlatform('ios')">Bekijk iPhone</button>
+      <button class="btn-maker" onclick="showPlatform('android')">Bekijk Android</button>
+      <button class="btn-maker" onclick="showPlatform('pc')">Bekijk Computer</button>
+    </div>
+  </div> -->
 
 </main>
 
