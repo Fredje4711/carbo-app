@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DLML Activiteiten – Installatie</title>
+
+  <style>
+    :root {
+      --primary-color: #23a9e4; 
+      --bg-color: #f4f9fc;
+    }
+
+    body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.5; color: #333; margin: 0; background-color: var(--bg-color); }
+    header { background: var(--primary-color); color: white; padding: 1.2rem; text-align: center; }
+    header h1 { margin: 0; font-size: 1.4rem; }
+    
+    main { max-width: 480px; margin: 0 auto; padding: 15px; }
+
+    /* DE NIEUWE WAARSCHUWING BOVENAAN */
+    .read-first-alert {
+      background: #fff3cd; border: 2px solid #ffeeba; color: #856404;
+      padding: 15px; border-radius: 12px; margin-bottom: 20px;
+      text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+    .read-first-alert strong { font-size: 1.1rem; display: block; margin-bottom: 5px; color: #c82333; }
+
+    #detection-alert {
+      background: #fff; border: 2px solid var(--primary-color); color: var(--primary-color); 
+      padding: 10px; border-radius: 10px; text-align: center; margin-bottom: 15px; font-weight: bold; font-size: 0.9rem;
+    }
+
+    .card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-top: 5px solid var(--primary-color); }
+    h2 { color: var(--primary-color); margin-top: 0; font-size: 1.15rem; text-align: center; }
+    
+    .btn-install { 
+      display: block; background: var(--primary-color); color: white; border-radius: 50px; 
+      padding: 1.1rem; text-align: center; text-decoration: none; font-weight: bold; font-size: 1.2rem; 
+      margin: 15px 0; box-shadow: 0 4px 12px rgba(35, 169, 228, 0.3);
+    }
+
+    .instruction-flow { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 12px; padding: 15px; margin-top: 10px; }
+    .screenshot-img { width: 100%; height: auto; border-radius: 8px; border: 1px solid #ddd; margin: 10px 0; }
+    .arrow-down { text-align: center; font-size: 1.5rem; color: var(--primary-color); margin: 5px 0; }
+
+    .pc-warning { border-left: 5px solid var(--primary-color); background-color: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.95rem; }
+    
+    .platform-info { display: none; }
+    .ios-box { background: #fffde7; border: 1px solid #ffe57f; padding: 15px; border-radius: 10px; margin-top: 10px; font-size: 0.9rem; }
+    .android-box { background: #ffeef0; color: #d9534f; padding: 10px; border-radius: 8px; font-weight: bold; text-align: center; font-size: 0.9rem; margin-top: 10px; border: 1px solid #f5c6cb; }
+
+    .removal-info { margin-top: 0px; padding-top: 0px; font-size: 0.85rem; color: #666; }
+    .maker-panel { margin-top: 30px; padding: 10px; background: #eee; border-radius: 10px; text-align: center; border: 1px dashed #999; }
+    .btn-maker { padding: 5px 10px; font-size: 0.7rem; cursor: pointer; background: white; border: 1px solid #ccc; margin: 2px; }
+  </style>
+
+  <script>
+    function showPlatform(type) {
+      document.getElementById('info-ios').style.display = 'none';
+      document.getElementById('info-android').style.display = 'none';
+      document.getElementById('info-pc').style.display = 'none';
+      const alertBox = document.getElementById('detection-alert');
+
+      if (type === 'ios') {
+        alertBox.innerHTML = "📱 U hebt dit geopend op een iPhone GSM";
+        document.getElementById('info-ios').style.display = 'block';
+      } else if (type === 'android') {
+        alertBox.innerHTML = "🤖 U hebt dit geopend op een Android GSM";
+        document.getElementById('info-android').style.display = 'block';
+      } else {
+        alertBox.innerHTML = "💻 U hebt dit geopend op een Computer";
+        document.getElementById('info-pc').style.display = 'block';
+      }
+    }
+
+    function detectDevice() {
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      if (/iPhone|iPad|iPod/i.test(ua)) showPlatform('ios');
+      else if (/Android/i.test(ua)) showPlatform('android');
+      else showPlatform('pc');
+    }
+    window.onload = detectDevice;
+  </script>
+</head>
+<body>
+
+<header>
+  <h1>📅 DLML Activiteiten App</h1>
+</header>
+
+<main>
+  <div id="detection-alert">Toestel controleren...</div>
+
+  <!-- LEES EERST DIT -->
+  <div class="read-first-alert">
+    <strong>⚠️ BELANGRIJK: Lees dit eerst</strong>
+    Bekijk eerst de 2 stappen hieronder voordat u op de knop drukt. Zo weet u precies wat u moet doen.
+  </div>
+
+  <!-- PC MELDING -->
+  <div id="info-pc" class="platform-info">
+    <div class="pc-warning">
+      <strong>📲 Deze app is voor uw smartphone</strong><br>
+      U bekijkt dit nu op uw computer. Wilt u de app op uw telefoon installeren?<br><br>
+      Open dan de <b>e-mail</b> of de <b>nieuwsbrief</b> die u van ons kreeg op uw <b>gsm (smartphone)</b>. 
+      Klik daar opnieuw op de link om de installatie te starten.
+    </div>
+  </div>
+
+  <div class="card">
+    
+    <p style="margin-bottom: 5px;"><strong>Stap 1:</strong> Klik op de blauwe knop.</p>
+    <a href="https://eu.jotform.com/nl/app/243115564264353" class="btn-install">Start de Installatie</a>
+
+    <div class="arrow-down">⬇️</div>
+
+    <div class="instruction-flow">
+      <p style="margin-top: 0;"><strong>Stap 2:</strong> Klik in het volgende scherm direct op de <b>groene knop</b>:</p>
+      <img src="screenshot_1.png" alt="Groene knop voorbeeld" class="screenshot-img">
+    </div>
+
+    <!-- ANDROID SPECIFIEK -->
+    <div id="info-android" class="platform-info">
+      <div class="android-box">
+        ⚠️ Wacht na het klikken 10 seconden.<br>
+        De app verschijnt vanzelf op uw telefoon.
+      </div>
+    </div>
+
+    <!-- iPHONE SPECIFIEK -->
+    <div id="info-ios" class="platform-info">
+      <div class="ios-box">
+        <strong>Voor iPhone gebruikers:</strong><br>
+        De groene knop geeft op een iPhone vaak alleen uitleg. Doe daarna dit zelf onderaan in uw browser (Safari):<br><br>
+        1. Tik op het deel-icoon <img src="https://img.icons8.com/ios/20/000000/export.png" style="vertical-align:middle"> (vierkant met pijl omhoog).<br>
+        2. Kies <b>'Zet op beginscherm'</b>.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <details class="removal-info">
+      <summary><b>Hoe verwijder ik de app?</b></summary>
+      <p style="margin-top:10px;"><b>GSM:</b> Houd het blauwe DLML-logo lang ingedrukt en kies 'Verwijderen'.</p>
+      <p><b>Computer:</b> Open de app, klik op de 3 puntjes (⋮) en kies 'DLML verwijderen'.</p>
+    </details>
+  </div>
+	<!-- Mijn testknoppen -->
+  <div class="maker-panel">
+    <button class="btn-maker" onclick="showPlatform('ios')">Bekijk iPhone</button>
+    <button class="btn-maker" onclick="showPlatform('android')">Bekijk Android</button>
+    <button class="btn-maker" onclick="showPlatform('pc')">Bekijk Computer</button>
+  </div> 
+  
+  <div style="text-align: center; margin: 20px 0; padding: 0px; background: #ffffff; border: 1px solid #ddd; border-radius: 12px; font-size: 0.9rem;">
+    <strong>Klaar?</strong> Gebruik de <b>terug-knop</b> van uw telefoon of druk op het <b>kruisje (X)</b> bovenaan om terug te gaan naar de nieuwsbrief.
+  </div>
+  
+</main>
+
+<footer style="text-align:center; padding: 0px; color: #888; font-size: 0.75rem;">
+  © 2025 – Diabetes Liga Midden Limburg
+</footer>
+
+</body>
+</html>
