@@ -373,16 +373,13 @@ function updateCreditDisplay() {
                         (c <= 10 ? "#d98200" : "black");
 
   // melding onder resultaat
-  if (c === 0) {
-    info.textContent = "⛔ Je gratis scans zijn opgebruikt. Contacteer Freddy om verder te gebruiken.";
-    info.className = "credit-info zero";
-  } else if (c <= 10) {
-    info.textContent = "⚠️ Je hebt nog " + c + " scans over.";
-    info.className = "credit-info low";
-  } else {
-    info.textContent = "ℹ️ Elke analyse verbruikt 1 gratis credit. Je kreeg 50 gratis.";
-    info.className = "credit-info";
-  }
+if (c <= 5) {
+  info.textContent = "⛔ Je gratis scans zijn bijna opgebruikt. Mail naar fredje_s@skynet.be voor meer gratis scans.";
+  info.className = "credit-info zero";
+} else {
+  info.textContent = "ℹ️ Elke analyse verbruikt 1 gratis credit. Je kreeg 50 gratis.";
+  info.className = "credit-info";
+}
 }
 
 // 1 credit verbruiken per analyse
@@ -399,7 +396,6 @@ function useCredit() {
 function checkCreditBeforeAnalysis() {
   let c = loadCredits();
   if (c <= 0) {
-    alert("⛔ Je gratis scans zijn opgebruikt. Contacteer Freddy om verder te gebruiken.");
     return false;
   }
   return true;
