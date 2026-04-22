@@ -1,4 +1,3 @@
-
 document.addEventListener("DOMContentLoaded", () => {
 
 // ---------- FOTO PREVIEW + OPSLAG ----------
@@ -10,15 +9,12 @@ let currentImageData = null;
 async function handleImageSelection(event) {
   const file = event.target.files[0];
   if (file) {
-    // toon preview
     const reader = new FileReader();
     reader.onload = (e) => {
       preview.src = e.target.result;
       preview.style.display = 'block';
     };
     reader.readAsDataURL(file);
-
-    // verklein afbeelding vóór verzending
     currentImageData = await resizeImage(file, 1024);
   }
 }
@@ -39,31 +35,15 @@ if (micButton) {
   if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
-	recognition.continuous = true; // blijf luisteren, niet stoppen bij stilte
-
     recognition.lang = 'nl-NL';
     recognition.interimResults = false;
-    recognition.continuous = true;  // ✅ deze regel dus toevoegen of op true zetten
+    recognition.continuous = true;
     recognition.maxAlternatives = 1;
-
 
     recognition.onresult = (event) => {
       const transcript = event.results[event.results.length - 1][0].transcript.trim();
       description.value += (description.value ? ' ' : '') + transcript;
     };
-
- //   recognition.onstart = () => {
- //     recognizing = true;
- //     micButton.textContent = '🛑 Stop opname';
- //     clearTimeout(stopTimer);
- //     stopTimer = setTimeout(() => {
- //       if (recognizing) {
- //         recognition.stop();
- //         recognizing = false;
- //         micButton.textContent = '🎙️ Start spraak';
- //       }
- //     }, 12000);
- //   };
 
     recognition.onend = () => {
       clearTimeout(stopTimer);
@@ -96,130 +76,90 @@ if (micButton) {
   }
 }
 
-
-
  // ---------- AUDIO OPNAME via MediaRecorder + Whisper ----------
   const recordBtn = document.getElementById('recordBtn');
   const descriptionBox = document.getElementById('description');
   let mediaRecorder;
   let audioChunks = [];
   let stream = null;
-  let audioContext = null;     // nieuw
-  let oscillator = null;       // nieuw
-  let keepAliveGain = null;    // nieuw
-
+  let audioContext = null;
+  let oscillator = null;
+  let keepAliveGain = null;
 
   recordBtn.addEventListener('click', async () => {
-  // als er al een opname bezig is → stop deze netjes
-  if (mediaRecorder && mediaRecorder.state === "recording") {
-    console.log("🟥 Handmatig stoppen...");
-    mediaRecorder.stop();
-
-    // ⛔️ sluit de microfoon direct
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      stream = null;
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+      mediaRecorder.stop();
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
+      setTimeout(() => {
+        recordBtn.textContent = "🎤 Inspreken";
+        recordBtn.classList.remove("recording");
+      }, 500);
+      return;
     }
-
-    // ⏱️ kleine vertraging zodat 'onstop' event eerst kan afwerken
-setTimeout(() => {
-  recordBtn.textContent = "🎤 Inspreken";
-  recordBtn.classList.remove("recording"); // 🔵 zet terug blauw
-}, 500);
-
-
-    return;
-  }
-
-try {
-  console.log("🟩 Start opname...");
-
-// Vraag audio aan met instellingen die voorkomen dat hij stopt bij stilte
-stream = await navigator.mediaDevices.getUserMedia({
-  audio: {
-    echoCancellation: true,
-    noiseSuppression: false,
-    autoGainControl: false,
-    channelCount: 1
-  }
-});
-
-// 📢 Houd de opname actief op mobiel: genereer constante stilte (zonder mic naar speakers te routen)
-try {
-  audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  oscillator = audioContext.createOscillator();
-  keepAliveGain = audioContext.createGain();
-  keepAliveGain.gain.value = 0.00001; // praktisch onhoorbaar
-  oscillator.connect(keepAliveGain).connect(audioContext.destination);
-  oscillator.start();
-} catch (e) {
-  console.warn("Silent-tone activatie niet mogelijk:", e);
-}
-
-
-
-  mediaRecorder = new MediaRecorder(stream);
-  audioChunks = [];
-
-  mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-
-  mediaRecorder.onstop = async () => {
-    console.log("🟦 Opname gestopt, verzenden naar Whisper...");
-    const blob = new Blob(audioChunks, { type: 'audio/webm' });
-    const formData = new FormData();
-    formData.append('audio', blob, 'opname.webm');
 
     try {
-      const response = await fetch('https://carbo-app.vercel.app/api/whisper', {
-        method: 'POST',
-        body: formData
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false, channelCount: 1 }
       });
 
-      const data = await response.json();
-      console.log("🟪 Antwoord van Whisper:", data);
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        oscillator = audioContext.createOscillator();
+        keepAliveGain = audioContext.createGain();
+        keepAliveGain.gain.value = 0.00001;
+        oscillator.connect(keepAliveGain).connect(audioContext.destination);
+        oscillator.start();
+      } catch (e) { console.warn("Silent-tone fout:", e); }
 
-      if (data.text) {
-        descriptionBox.value += (descriptionBox.value ? ' ' : '') + data.text;
-      }
+      mediaRecorder = new MediaRecorder(stream);
+      audioChunks = [];
+      mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+        const formData = new FormData();
+        formData.append('audio', blob, 'opname.webm');
+
+        try {
+          const response = await fetch('https://carbo-app.vercel.app/api/whisper', {
+            method: 'POST',
+            body: formData
+          });
+          const data = await response.json();
+          if (data.text) {
+            descriptionBox.value += (descriptionBox.value ? ' ' : '') + data.text;
+          }
+        } catch (err) {
+          alert("Er ging iets mis bij de verwerking van de opname.");
+        }
+
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+          stream = null;
+        }
+        if (oscillator) { try { oscillator.stop(); } catch(e){} oscillator = null; }
+        if (audioContext) { try { audioContext.close(); } catch(e){} audioContext = null; }
+        recordBtn.textContent = "🎤 Inspreken";
+        recordBtn.classList.remove("recording");
+      };
+
+      mediaRecorder.start();
+      recordBtn.textContent = "🛑 Stop opname";
+      recordBtn.classList.add("recording");
     } catch (err) {
-      console.error("Fout bij verzenden naar Whisper:", err);
-      alert("Er ging iets mis bij de verwerking van de opname.");
+      alert("Microfoon niet beschikbaar of toestemming geweigerd.");
     }
-
-    // microfoon volledig afsluiten na verwerking
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      stream = null;
-    }
-	
-	// keep-alive toon uitzetten en context sluiten
-if (oscillator) { try { oscillator.stop(); } catch(e){} oscillator = null; }
-if (audioContext) { try { audioContext.close(); } catch(e){} audioContext = null; }
-keepAliveGain = null;
-
-    recordBtn.textContent = "🎤 Inspreken";
-    recordBtn.classList.remove("recording");
-  };
-
-  // Start opname
-  mediaRecorder.start();
-  recordBtn.textContent = "🛑 Stop opname";
-  recordBtn.classList.add("recording");
-
-} catch (err) {
-  console.error("Microfoon niet beschikbaar of toestemming geweigerd:", err);
-  alert("Microfoon niet beschikbaar of toestemming geweigerd.");
-}
-}); // sluit recordBtn.addEventListene
+  });
 
 // ---------- FOTO VERKLEINING ----------
 async function resizeImage(file, maxSize) {
   return new Promise((resolve) => {
     const img = document.createElement('img');
     const reader = new FileReader();
-    reader.onload = (e) => {
-      img.src = e.target.result;
-    };
+    reader.onload = (e) => { img.src = e.target.result; };
     img.onload = () => {
       const canvas = document.createElement('canvas');
       const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
@@ -227,7 +167,7 @@ async function resizeImage(file, maxSize) {
       canvas.height = img.height * scale;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL('image/jpeg', 0.85)); // 85 % kwaliteit
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
     };
     reader.readAsDataURL(file);
   });
@@ -253,27 +193,22 @@ Gebruik duidelijke opsomming en totaal. Beschrijving gebruiker: ${description.va
   try {
     const response = await fetch("https://carbo-app.vercel.app/api/proxy", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
           {
             role: "user",
             content: [
-  { type: "text", text: prompt },
-  { type: "image_url", image_url: { url: currentImageData } }
-]
-
+              { type: "text", text: prompt },
+              { type: "image_url", image_url: { url: currentImageData } }
+            ]
           }
         ]
       })
     });
 
     if (!response.ok) throw new Error(`API-fout: ${response.status}`);
-
     const data = await response.json();
     const answer = data.choices?.[0]?.message?.content?.trim() || "Geen antwoord ontvangen.";
     resultText.textContent = answer;
@@ -289,19 +224,10 @@ const infoPopup = document.getElementById("infoPopup");
 const closePopup = document.getElementById("closePopup");
 
 if (infoLink && infoPopup && closePopup) {
-  infoLink.addEventListener("click", () => {
-    infoPopup.style.display = "block";
-  });
-
-  closePopup.addEventListener("click", () => {
-    infoPopup.style.display = "none";
-  });
-
-  // sluiten bij tikken buiten de popup
+  infoLink.addEventListener("click", () => { infoPopup.style.display = "block"; });
+  closePopup.addEventListener("click", () => { infoPopup.style.display = "none"; });
   infoPopup.addEventListener("click", (e) => {
-    if (e.target === infoPopup) {
-      infoPopup.style.display = "none";
-    }
+    if (e.target === infoPopup) { infoPopup.style.display = "none"; }
   });
 }
 
@@ -309,31 +235,17 @@ if (infoLink && infoPopup && closePopup) {
 const resetBtn = document.getElementById("resetBtn");
 if (resetBtn) {
   resetBtn.addEventListener("click", () => {
-
-    // ❗️BELANGRIJK: interne fotogegevens volledig leegmaken
     currentImageData = null;
-
-    // wis afbeelding
     const preview = document.getElementById("preview");
     if (preview) preview.src = "";
-
-    // wis inputs (camera & bestand)
     const cameraInput = document.getElementById("cameraInput");
     const fileInput = document.getElementById("fileInput");
     if (cameraInput) cameraInput.value = "";
     if (fileInput) fileInput.value = "";
-
-    // wis beschrijving
     const descriptionBox = document.getElementById("description");
     if (descriptionBox) descriptionBox.value = "";
-
-    // wis resultaat
     const resultText = document.getElementById("resultText");
-    if (resultText) {
-      resultText.textContent = "Nog geen analyse uitgevoerd.";
-    }
-
-    // eventueel scroll naar boven
+    if (resultText) { resultText.textContent = "Nog geen analyse uitgevoerd."; }
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 }
@@ -343,7 +255,6 @@ if (resetBtn) {
 // -----------------------------
 let maxCredits = 50;
 
-// Credits laden
 function loadCredits() {
   let c = localStorage.getItem("carbo_credits");
   if (c === null) {
@@ -353,12 +264,10 @@ function loadCredits() {
   return parseInt(c, 10);
 }
 
-// Credits opslaan
 function saveCredits(v) {
   localStorage.setItem("carbo_credits", v);
 }
 
-// Teller updaten
 function updateCreditDisplay() {
   const box = document.getElementById("creditCount");
   const wrapper = document.getElementById("creditBox");
@@ -368,21 +277,26 @@ function updateCreditDisplay() {
   let c = loadCredits();
   box.textContent = c;
 
-  // kleur
-  wrapper.style.color = (c === 0) ? "red" :
-                        (c <= 10 ? "#d98200" : "black");
+  // Kleur aanpassen: Rood bij 0, Oranje bij 1 t/m 10, anders zwart
+  wrapper.style.color = (c === 0) ? "red" : (c <= 10 ? "#d98200" : "black");
 
-  // melding onder resultaat
-if (c <= 5) {
-  info.textContent = "⛔ Je gratis scans zijn bijna opgebruikt. Mail naar fredje_s@skynet.be voor meer gratis scans.";
-  info.className = "credit-info zero";
-} else {
-  info.textContent = "ℹ️ Elke analyse verbruikt 1 gratis credit. Je kreeg 50 gratis.";
-  info.className = "credit-info";
-}
+  // De meldingen
+  if (c === 0) {
+    // Situatie: Helemaal op (0 scans)
+    info.textContent = "⛔ Uw tegoed is opgebruikt. Mail naar fredje_s@skynet.be voor een nieuw tegoed.";
+    info.className = "credit-info zero";
+  } else if (c <= 5) {
+    // Situatie: Bijna op (5, 4, 3, 2 of 1 scan over)
+    // Deze tekst blijft nu exact hetzelfde zolang men tussen de 5 en 1 scan zit.
+    info.textContent = "⚠️ Je gratis scans zijn bijna opgebruikt. Mail naar fredje_s@skynet.be voor meer gratis scans.";
+    info.className = "credit-info warning";
+  } else {
+    // Situatie: Genoeg credits (meer dan 5)
+    info.textContent = "ℹ️ Elke analyse verbruikt 1 gratis credit. Je kreeg er 50 gratis.";
+    info.className = "credit-info";
+  }
 }
 
-// 1 credit verbruiken per analyse
 function useCredit() {
   let c = loadCredits();
   if (c <= 0) return false;
@@ -392,48 +306,36 @@ function useCredit() {
   return true;
 }
 
-// Voor analyse eerst credits checken
 function checkCreditBeforeAnalysis() {
   let c = loadCredits();
   if (c <= 0) {
+    // NIEUW: Een duidelijke melding als men op de knop drukt met 0 credits
+    alert("Uw tegoed is opgebruikt.\n\nStuur een e-mail naar fredje_s@skynet.be om nieuwe gratis scans te ontvangen.");
     return false;
   }
   return true;
 }
 
-// -----------------------------
-//  ANALYSE-KNOP WRAPPEN
-// -----------------------------
+// ANALYSE-KNOP WRAPPEN
 analyzeButton.addEventListener("click", async (event) => {
-
-  // 1. eerst checken of we een foto hebben
   if (!currentImageData) {
     alert("Maak of kies eerst een foto.");
     event.stopImmediatePropagation();
     return;
   }
 
-  // 2. dan pas credits checken
   if (!checkCreditBeforeAnalysis()) {
     event.stopImmediatePropagation();
     return;
   }
 
-  // 3. dan pas credits verminderen
   if (!useCredit()) {
     event.stopImmediatePropagation();
     return;
   }
-
-  // → daarna mag de analyse doorgaan zoals normaal
 }, { capture: true });
-
 
 // Initialiseren
 updateCreditDisplay();
 
-
-
-}); // sluit DOMContentLoaded
-
-
+});
