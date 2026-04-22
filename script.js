@@ -23,7 +23,7 @@ cameraInput.addEventListener('change', handleImageSelection);
 fileInput.addEventListener('change', handleImageSelection);
 
 
-// ---------- SPRAAKHERKENNING ----------
+// ---------- SPRAAKHERKENNING (Browser ingebouwd) ----------
 const micButton = document.getElementById('micButton');
 const description = document.getElementById('description');
 
@@ -37,7 +37,7 @@ if (micButton) {
     recognition = new SpeechRecognition();
     recognition.lang = 'nl-NL';
     recognition.interimResults = false;
-    recognition.continuous = true;
+    recognition.continuous = true; 
     recognition.maxAlternatives = 1;
 
     recognition.onresult = (event) => {
@@ -76,7 +76,8 @@ if (micButton) {
   }
 }
 
- // ---------- AUDIO OPNAME via MediaRecorder + Whisper ----------
+
+ // ---------- AUDIO OPNAME via MediaRecorder + Whisper (Vercel) ----------
   const recordBtn = document.getElementById('recordBtn');
   const descriptionBox = document.getElementById('description');
   let mediaRecorder;
@@ -109,10 +110,10 @@ if (micButton) {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
         oscillator = audioContext.createOscillator();
         keepAliveGain = audioContext.createGain();
-        keepAliveGain.gain.value = 0.00001;
+        keepAliveGain.gain.value = 0.00001; 
         oscillator.connect(keepAliveGain).connect(audioContext.destination);
         oscillator.start();
-      } catch (e) { console.warn("Silent-tone fout:", e); }
+      } catch (e) { console.warn("Silent-tone activatie niet mogelijk:", e); }
 
       mediaRecorder = new MediaRecorder(stream);
       audioChunks = [];
@@ -149,6 +150,7 @@ if (micButton) {
       mediaRecorder.start();
       recordBtn.textContent = "🛑 Stop opname";
       recordBtn.classList.add("recording");
+
     } catch (err) {
       alert("Microfoon niet beschikbaar of toestemming geweigerd.");
     }
@@ -250,10 +252,12 @@ if (resetBtn) {
   });
 }
 
-// -----------------------------
-//  CREDITSYSTEEM (50 scans)
-// -----------------------------
+// ------------------------------------------------
+//  CREDITSYSTEEM + GEHEIM BEHEERDERSMENU
+// ------------------------------------------------
 let maxCredits = 50;
+let secretClicks = 0;
+let secretTimer;
 
 function loadCredits() {
   let c = localStorage.getItem("carbo_credits");
@@ -280,21 +284,42 @@ function updateCreditDisplay() {
   // Kleur aanpassen: Rood bij 0, Oranje bij 1 t/m 10, anders zwart
   wrapper.style.color = (c === 0) ? "red" : (c <= 10 ? "#d98200" : "black");
 
-  // De meldingen
+  // De meldingen voor de gebruiker
   if (c === 0) {
-    // Situatie: Helemaal op (0 scans)
     info.textContent = "⛔ Uw tegoed is opgebruikt. Mail naar fredje_s@skynet.be voor een nieuw tegoed.";
     info.className = "credit-info zero";
   } else if (c <= 5) {
-    // Situatie: Bijna op (5, 4, 3, 2 of 1 scan over)
-    // Deze tekst blijft nu exact hetzelfde zolang men tussen de 5 en 1 scan zit.
     info.textContent = "⚠️ Je gratis scans zijn bijna opgebruikt. Mail naar fredje_s@skynet.be voor meer gratis scans.";
     info.className = "credit-info warning";
   } else {
-    // Situatie: Genoeg credits (meer dan 5)
     info.textContent = "ℹ️ Elke analyse verbruikt 1 gratis credit. Je kreeg er 50 gratis.";
     info.className = "credit-info";
   }
+}
+
+// ---------- GEHEIM BEHEERDERS-MENU (Activeer door 5x op de teller te tikken) ----------
+const creditTrigger = document.getElementById("creditBox");
+if (creditTrigger) {
+  creditTrigger.addEventListener("click", () => {
+    secretClicks++;
+    clearTimeout(secretTimer);
+    secretTimer = setTimeout(() => { secretClicks = 0; }, 2000);
+
+    if (secretClicks >= 5) {
+      let code = prompt("Beheerdersmodus: Voer de herlaadcode in:");
+      if (code === "1947") { 
+        let nieuwSaldo = prompt("Nieuw aantal scans instellen voor deze actieve gebruiker:", "100");
+        if (nieuwSaldo !== null) {
+          saveCredits(parseInt(nieuwSaldo, 10));
+          updateCreditDisplay();
+          alert("Het tegoed is succesvol aangepast naar " + nieuwSaldo + " scans.");
+        }
+      } else if (code !== null) {
+        alert("Onjuiste code.");
+      }
+      secretClicks = 0;
+    }
+  });
 }
 
 function useCredit() {
@@ -309,14 +334,13 @@ function useCredit() {
 function checkCreditBeforeAnalysis() {
   let c = loadCredits();
   if (c <= 0) {
-    // NIEUW: Een duidelijke melding als men op de knop drukt met 0 credits
     alert("Uw tegoed is opgebruikt.\n\nStuur een e-mail naar fredje_s@skynet.be om nieuwe gratis scans te ontvangen.");
     return false;
   }
   return true;
 }
 
-// ANALYSE-KNOP WRAPPEN
+// ---------- ANALYSE-KNOP WRAPPEN ----------
 analyzeButton.addEventListener("click", async (event) => {
   if (!currentImageData) {
     alert("Maak of kies eerst een foto.");
@@ -335,7 +359,7 @@ analyzeButton.addEventListener("click", async (event) => {
   }
 }, { capture: true });
 
-// Initialiseren
+// Bij opstarten direct de teller tonen
 updateCreditDisplay();
 
-});
+}); // Einde script
