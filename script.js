@@ -23,7 +23,7 @@ cameraInput.addEventListener('change', handleImageSelection);
 fileInput.addEventListener('change', handleImageSelection);
 
 
-// ---------- SPRAAKHERKENNING (Browser ingebouwd) ----------
+// ---------- SPRAAKHERKENNING ----------
 const micButton = document.getElementById('micButton');
 const description = document.getElementById('description');
 
@@ -77,7 +77,7 @@ if (micButton) {
 }
 
 
- // ---------- AUDIO OPNAME via MediaRecorder + Whisper (Vercel) ----------
+ // ---------- AUDIO OPNAME via Whisper ----------
   const recordBtn = document.getElementById('recordBtn');
   const descriptionBox = document.getElementById('description');
   let mediaRecorder;
@@ -113,7 +113,7 @@ if (micButton) {
         keepAliveGain.gain.value = 0.00001; 
         oscillator.connect(keepAliveGain).connect(audioContext.destination);
         oscillator.start();
-      } catch (e) { console.warn("Silent-tone activatie niet mogelijk:", e); }
+      } catch (e) { console.warn("Silent-tone fout:", e); }
 
       mediaRecorder = new MediaRecorder(stream);
       audioChunks = [];
@@ -281,10 +281,8 @@ function updateCreditDisplay() {
   let c = loadCredits();
   box.textContent = c;
 
-  // Kleur aanpassen: Rood bij 0, Oranje bij 1 t/m 10, anders zwart
   wrapper.style.color = (c === 0) ? "red" : (c <= 10 ? "#d98200" : "black");
 
-  // De meldingen voor de gebruiker
   if (c === 0) {
     info.textContent = "⛔ Uw tegoed is opgebruikt. Mail naar fredje_s@skynet.be voor een nieuw tegoed.";
     info.className = "credit-info zero";
@@ -297,23 +295,25 @@ function updateCreditDisplay() {
   }
 }
 
-// ---------- GEHEIM BEHEERDERS-MENU (Activeer door 5x op de teller te tikken) ----------
+// ---------- GEHEIM BEHEERDERS-MENU ----------
 const creditTrigger = document.getElementById("creditBox");
 if (creditTrigger) {
+  // VOORKOM SELECTEREN VAN TEKST OP GSM (zodat klikken geteld worden)
+  creditTrigger.style.userSelect = "none";
+  creditTrigger.style.webkitUserSelect = "none";
+
   creditTrigger.addEventListener("click", () => {
     secretClicks++;
     clearTimeout(secretTimer);
-    secretTimer = setTimeout(() => { secretClicks = 0; }, 2000);
+    secretTimer = setTimeout(() => { secretClicks = 0; }, 3000); // 3 sec de tijd
 
     if (secretClicks >= 5) {
       let code = prompt("Beheerdersmodus: Voer de herlaadcode in:");
       if (code === "1947") { 
-        let nieuwSaldo = prompt("Nieuw aantal scans instellen voor deze actieve gebruiker:", "100");
-        if (nieuwSaldo !== null) {
-          saveCredits(parseInt(nieuwSaldo, 10));
-          updateCreditDisplay();
-          alert("Het tegoed is succesvol aangepast naar " + nieuwSaldo + " scans.");
-        }
+        // DIRECT NAAR 100 ZONDER EXTRA VRAAG
+        saveCredits(100);
+        updateCreditDisplay();
+        alert("Het tegoed is succesvol herladen naar 100 scans.");
       } else if (code !== null) {
         alert("Onjuiste code.");
       }
@@ -340,26 +340,23 @@ function checkCreditBeforeAnalysis() {
   return true;
 }
 
-// ---------- ANALYSE-KNOP WRAPPEN ----------
+// ANALYSE-KNOP LOGICA
 analyzeButton.addEventListener("click", async (event) => {
   if (!currentImageData) {
     alert("Maak of kies eerst een foto.");
     event.stopImmediatePropagation();
     return;
   }
-
   if (!checkCreditBeforeAnalysis()) {
     event.stopImmediatePropagation();
     return;
   }
-
   if (!useCredit()) {
     event.stopImmediatePropagation();
     return;
   }
 }, { capture: true });
 
-// Bij opstarten direct de teller tonen
 updateCreditDisplay();
 
-}); // Einde script
+});
