@@ -298,19 +298,21 @@ function updateCreditDisplay() {
 // ---------- GEHEIM BEHEERDERS-MENU ----------
 const creditTrigger = document.getElementById("creditBox");
 if (creditTrigger) {
-  // VOORKOM SELECTEREN VAN TEKST OP GSM (zodat klikken geteld worden)
+  // MAAK DE KLIKZONE GROTER EN VOORKOM SELECTIE
+  creditTrigger.style.padding = "15px"; // Extra ruimte om makkelijker te klikken
+  creditTrigger.style.margin = "-15px"; // Voorkom dat de tekst verspringt door de padding
+  creditTrigger.style.display = "inline-block";
   creditTrigger.style.userSelect = "none";
   creditTrigger.style.webkitUserSelect = "none";
 
   creditTrigger.addEventListener("click", () => {
     secretClicks++;
     clearTimeout(secretTimer);
-    secretTimer = setTimeout(() => { secretClicks = 0; }, 3000); // 3 sec de tijd
+    secretTimer = setTimeout(() => { secretClicks = 0; }, 3000); 
 
     if (secretClicks >= 5) {
       let code = prompt("Beheerdersmodus: Voer de herlaadcode in:");
       if (code === "1947") { 
-        // DIRECT NAAR 100 ZONDER EXTRA VRAAG
         saveCredits(100);
         updateCreditDisplay();
         alert("Het tegoed is succesvol herladen naar 100 scans.");
