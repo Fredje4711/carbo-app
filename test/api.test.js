@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { extractResponseText } from "../lib/server.js";
+import { extractResponseText, isTrustedVercelPreview } from "../lib/server.js";
 import analysisHandler, { validateInput } from "../api/proxy.js";
 
 const validImage = `data:image/jpeg;base64,${Buffer.from("test").toString("base64")}`;
@@ -22,6 +22,13 @@ test("extractResponseText leest Responses API-uitvoer", () => {
     output: [{ content: [{ type: "output_text", text: '{"meal_detected":true}' }] }],
   };
   assert.equal(extractResponseText(data), '{"meal_detected":true}');
+});
+
+test("alleen previewhosts binnen het eigen Vercel-team worden toegestaan", () => {
+  assert.equal(isTrustedVercelPreview("https://carbo-nm2k6kvr0-fredje4711-gmailcoms-projects.vercel.app"), true);
+  assert.equal(isTrustedVercelPreview("https://carbo-app-git-test-fredje4711-gmailcoms-projects.vercel.app"), true);
+  assert.equal(isTrustedVercelPreview("https://carbo-aanvaller.vercel.app"), false);
+  assert.equal(isTrustedVercelPreview("https://ander-project-fredje4711-gmailcoms-projects.vercel.app"), false);
 });
 
 test("analysehandler bepaalt zelf endpoint, model en prompt", async () => {
