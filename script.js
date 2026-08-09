@@ -3,6 +3,11 @@ const MAX_FILE_BYTES = 12 * 1024 * 1024;
 const MAX_RECORDING_MS = 45_000;
 const REQUEST_TIMEOUT_MS = 55_000;
 const SUPPORTED_IMAGES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const CREDIT_STORAGE_KEY = "carbo_credits";
+const INITIAL_CREDITS = 50;
+const REFILL_CREDITS = 100;
+const LOW_CREDIT_LEVEL = 10;
+const REFILL_CODE = "1955";
 
 const elements = {
   cameraInput: document.getElementById("cameraInput"),
@@ -14,6 +19,16 @@ const elements = {
   recordBtn: document.getElementById("recordBtn"),
   resetBtn: document.getElementById("resetBtn"),
   analyzeButton: document.getElementById("analyzeButton"),
+  creditPanel: document.getElementById("creditPanel"),
+  creditBox: document.getElementById("creditBox"),
+  creditCount: document.getElementById("creditCount"),
+  creditInfo: document.getElementById("creditInfo"),
+  feedbackLink: document.getElementById("feedbackLink"),
+  refillDialog: document.getElementById("refillDialog"),
+  refillForm: document.getElementById("refillForm"),
+  refillCode: document.getElementById("refillCode"),
+  refillError: document.getElementById("refillError"),
+  refillCancel: document.getElementById("refillCancel"),
   status: document.getElementById("statusMessage"),
   resultSection: document.getElementById("resultSection"),
   totalBest: document.getElementById("totalBest"),
@@ -32,6 +47,107 @@ let mediaRecorder = null;
 let mediaStream = null;
 let recordingTimer = null;
 let audioChunks = [];
+let memoryCredits = INITIAL_CREDITS;
+let creditTapCount = 0;
+let creditTapTimer = null;
+
+function readCredits() {
+  try {
+    const stored = localStorage.getItem(CREDIT_STORAGE_KEY);
+    if (stored === null) {
+      localStorage.setItem(CREDIT_STORAGE_KEY, String(INITIAL_CREDITS));
+      return INITIAL_CREDITS;
+    }
+    const parsed = Number.parseInt(stored, 10);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : INITIAL_CREDITS;
+  } catch {
+    return memoryCredits;
+  }
+}
+
+function writeCredits(value) {
+  const safeValue = Math.max(0, Math.trunc(value));
+  memoryCredits = safeValue;
+  try {
+    localStorage.setItem(CREDIT_STORAGE_KEY, String(safeValue));
+  } catch {
+    // De teller blijft voor deze sessie werken als opslag geblokkeerd is.
+  }
+}
+
+function feedbackMailUrl() {
+  const subject = "Feedback Koolhydraten Scanner";
+  const body = [
+    "Hallo Freddy,",
+    "",
+    "Ik heb de Koolhydraten Scanner regelmatig gebruikt.",
+    "",
+    "Mijn ervaring:",
+    "",
+    "Wat vond ik goed?",
+    "",
+    "Wat kan volgens mij beter?",
+  ].join("\n");
+  return `mailto:fredje4711@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+function updateCreditDisplay() {
+  const credits = readCredits();
+  elements.creditCount.textContent = String(credits);
+  elements.creditPanel.dataset.level = credits === 0 ? "empty" : credits <= LOW_CREDIT_LEVEL ? "low" : "normal";
+  elements.creditInfo.hidden = credits > LOW_CREDIT_LEVEL;
+  elements.feedbackLink.hidden = credits > LOW_CREDIT_LEVEL;
+  elements.feedbackLink.href = feedbackMailUrl();
+
+  if (credits === 0) {
+    elements.creditInfo.textContent = "Uw gratis scans zijn opgebruikt. Mail Freddy met uw ervaring om verder te gaan.";
+  } else if (credits <= LOW_CREDIT_LEVEL) {
+    elements.creditInfo.textContent = `Nog ${credits} gratis ${credits === 1 ? "scan" : "scans"}. Deel gerust uw ervaring.`;
+  } else {
+    elements.creditInfo.textContent = "";
+  }
+  return credits;
+}
+
+function useCredit() {
+  const credits = readCredits();
+  if (credits <= 0) return false;
+  writeCredits(credits - 1);
+  updateCreditDisplay();
+  return true;
+}
+
+function handleCreditTap() {
+  creditTapCount += 1;
+  clearTimeout(creditTapTimer);
+  creditTapTimer = setTimeout(() => { creditTapCount = 0; }, 3000);
+  if (creditTapCount < 3) return;
+
+  creditTapCount = 0;
+  clearTimeout(creditTapTimer);
+  elements.refillCode.value = "";
+  elements.refillError.hidden = true;
+  elements.refillDialog.showModal();
+  elements.refillCode.focus();
+}
+
+function refillCredits() {
+  writeCredits(REFILL_CREDITS);
+  updateCreditDisplay();
+  setAnalyzing(false);
+  setStatus("Uw tegoed is herladen naar 100 gratis scans.", "success");
+}
+
+function handleRefillSubmit(event) {
+  event.preventDefault();
+  if (elements.refillCode.value !== REFILL_CODE) {
+    elements.refillError.hidden = false;
+    elements.refillCode.select();
+    return;
+  }
+  elements.refillDialog.close();
+  refillCredits();
+}
 
 function setStatus(message, type = "info") {
   elements.status.textContent = message;
@@ -40,7 +156,7 @@ function setStatus(message, type = "info") {
 }
 
 function setAnalyzing(active) {
-  elements.analyzeButton.disabled = active || !currentImageData;
+  elements.analyzeButton.disabled = active || !currentImageData || readCredits() <= 0;
   elements.analyzeButton.classList.toggle("loading", active);
   elements.analyzeButton.textContent = active ? "Analyseren…" : "Analyseer";
   elements.cameraInput.disabled = active;
@@ -208,6 +324,12 @@ function renderAnalysis(analysis) {
 
 async function analyzeMeal() {
   if (!currentImageData || analysisController) return;
+  if (readCredits() <= 0) {
+    updateCreditDisplay();
+    setStatus("Uw gratis scans zijn opgebruikt. Stuur Freddy een feedbackmail om verder te gaan.", "error");
+    elements.creditPanel.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
 
   analysisController = new AbortController();
   const timeout = setTimeout(() => analysisController?.abort(), REQUEST_TIMEOUT_MS);
@@ -229,6 +351,7 @@ async function analyzeMeal() {
     if (!data.analysis) throw new Error("Er werd geen bruikbaar resultaat ontvangen.");
 
     renderAnalysis(data.analysis);
+    useCredit();
     setStatus("Analyse voltooid.", "success");
   } catch (error) {
     const message = error.name === "AbortError"
@@ -354,6 +477,9 @@ elements.cameraInput.addEventListener("change", handleImageSelection);
 elements.fileInput.addEventListener("change", handleImageSelection);
 elements.description.addEventListener("input", updateCharacterCount);
 elements.analyzeButton.addEventListener("click", analyzeMeal);
+elements.creditBox.addEventListener("click", handleCreditTap);
+elements.refillForm.addEventListener("submit", handleRefillSubmit);
+elements.refillCancel.addEventListener("click", () => elements.refillDialog.close());
 elements.recordBtn.addEventListener("click", toggleRecording);
 elements.resetBtn.addEventListener("click", resetApp);
 
@@ -364,3 +490,4 @@ if ("serviceWorker" in navigator) {
 }
 
 updateCharacterCount();
+updateCreditDisplay();

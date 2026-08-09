@@ -9,8 +9,8 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="stylesheet" href="style.css?v=4">
-  <script src="script.js?v=4" defer></script>
+  <link rel="stylesheet" href="style.css?v=6">
+  <script src="script.js?v=6" defer></script>
 </head>
 <body>
   <header class="app-header">
@@ -80,6 +80,17 @@
         <button id="resetBtn" class="button ghost" type="button">Wissen</button>
       </div>
 
+      <div id="creditPanel" class="credit-panel">
+        <button id="creditBox" class="credit-box" type="button" aria-label="Resterende gratis scans">
+          <span>Gratis scans</span>
+          <strong id="creditCount">50</strong>
+        </button>
+        <div class="credit-message">
+          <p id="creditInfo" aria-live="polite" hidden></p>
+          <a id="feedbackLink" href="mailto:fredje4711@gmail.com" hidden>Stuur feedbackmail</a>
+        </div>
+      </div>
+
       <div id="statusMessage" class="status" role="status" aria-live="polite" hidden></div>
     </section>
 
@@ -123,5 +134,18 @@
     <p>© 2026 Freddy Sleeuwaert · Persoonlijk en educatief gebruik</p>
     <p class="privacy-copy">De app bewaart de foto of opname niet in een eigen databank. Voor de analyse wordt de inhoud via de beveiligde server aan OpenAI doorgegeven.</p>
   </footer>
+
+  <dialog id="refillDialog" class="refill-dialog" aria-labelledby="refillTitle">
+    <form id="refillForm">
+      <h2 id="refillTitle">Gratis scans herladen</h2>
+      <label for="refillCode">Herlaadcode</label>
+      <input id="refillCode" type="password" inputmode="numeric" autocomplete="off" maxlength="4" required>
+      <p id="refillError" class="refill-error" hidden>De herlaadcode is niet correct.</p>
+      <div class="dialog-actions">
+        <button id="refillCancel" class="button ghost" type="button">Annuleren</button>
+        <button class="button primary" type="submit">Herladen</button>
+      </div>
+    </form>
+  </dialog>
 </body>
 </html>
