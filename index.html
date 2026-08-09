@@ -1,115 +1,133 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Foto Koolhydraat App</title>
-  <link rel="stylesheet" href="style.css">
-  
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Maak een foto van een maaltijd en ontvang een voorzichtige schatting van de koolhydraten.">
+  <meta name="theme-color" content="#1261a6">
+  <title>Koolhydraten Scanner</title>
   <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#2c7be5">
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('service-worker.js')
-        .then(() => console.log('Service Worker geregistreerd'))
-        .catch(err => console.log('SW fout:', err));
-    });
-  }
-</script>
-
-  
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css?v=4">
+  <script src="script.js?v=4" defer></script>
 </head>
 <body>
-  <header>
-    <h1>🍽️ Koolhydraten Scanner</h1>
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="app-mark" aria-hidden="true">
+        <img src="icon-192.png" width="38" height="38" alt="">
+      </div>
+      <div>
+        <p class="eyebrow">Educatieve schatting</p>
+        <h1>Koolhydraten Scanner</h1>
+      </div>
+    </div>
   </header>
 
-  <main id="app">
-    <section id="input-section">
-<div class="upload-buttons">
-  <label class="btn-camera">
-    📸 Maak foto
-    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;">
-  </label>
-
-  <label class="btn-file">
-    📁 Kies bestand
-    <input type="file" id="fileInput" accept="image/*" style="display:none;">
-  </label>
-</div>
-
-
-      <div class="desc-label">
-  <label for="description">📝 Beschrijving (optioneel)</label>
-  <span id="infoLink" class="info-link"><b>Meer uitleg…</b></span>
-</div>
-
-<textarea id="description" placeholder="Voeg eventueel wat uitleg toe..."></textarea>
-
-<!-- Popup uitleg -->
-<div id="infoPopup" class="info-popup">
-  <div class="popup-content">
-    <button class="close-popup" id="closePopup">✖</button>
-    <p>
-  📸 <b>Maak foto</b> – dit opent de camera van je smartphone om meteen een foto te nemen. <br><br>
-  
-  📁 <b>Kies bestand</b> - selecteer een bestaande foto van je toestel of computer. <br><br>
-
-  📝 <b>Beschrijf</b> eventueel kort wat er op het bord ligt (ingrediënten, portie, saus …).  
-  Deze tekstbeschrijving is <b>optioneel</b> — je hoeft dus niet altijd iets in te vullen,  
-  maar extra informatie kan wel helpen om het resultaat nauwkeuriger te maken.<br><br>
-
-  🎙️ <b>Gebruik van spraak</b> is eveneens <b>optioneel</b>.  
-  Je kunt tekst inspreken in plaats van te typen, of als aanvulling op wat je al hebt ingevuld.  
-  De herkende tekst verschijnt na een paar seconden automatisch in het tekstvak.<br><br>
-
-  🔍 Tik daarna op <b>Analyseer,</b> na een paar seconden worden de koolhydraten weergegeven.<br><br>
-
-  💡 <b>Note:</b> de berekening blijft altijd een <b>geschatte waarde</b>,  
-  afhankelijk van de kwaliteit van de foto en de duidelijkheid van de ingevoerde tekst of spraak.
-</p>
-
-  </div>
-</div>
-
-
-      <div class="button-row">
-        <button id="recordBtn">🎤 Inspreken</button>
-        <button id="resetBtn" class="small-btn">♻️ Reset</button>
-        <button id="analyzeButton">🔍 Analyseer</button>
+  <main class="page-shell">
+    <section class="scanner-card" aria-labelledby="scanner-title">
+      <div class="intro">
+        <h2 id="scanner-title">Wat ligt er op uw bord?</h2>
+        <p>Maak een duidelijke foto van bovenaf en vermeld gekende porties of ingrediënten.</p>
       </div>
-	  
-	  <div id="creditBox" class="credit-box">
-      <p><b>🔢 Resterende gratis scans:</b> <span id="creditCount">50</span></p>
+
+      <div class="upload-grid">
+        <label class="upload-button" for="cameraInput">
+          <span aria-hidden="true">📷</span>
+          <span>Maak foto</span>
+        </label>
+        <input id="cameraInput" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" capture="environment">
+
+        <label class="upload-button secondary" for="fileInput">
+          <span aria-hidden="true">🖼️</span>
+          <span>Kies foto</span>
+        </label>
+        <input id="fileInput" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp">
       </div>
-	  
+
+      <figure id="previewWrap" class="preview-wrap" hidden>
+        <img id="preview" alt="Geselecteerde maaltijdfoto">
+        <figcaption>Controleer of de volledige maaltijd zichtbaar is.</figcaption>
+      </figure>
+
+      <div class="description-block">
+        <div class="field-heading">
+          <label for="description">Extra informatie <span>(optioneel)</span></label>
+          <output id="charCount" for="description">0/800</output>
+        </div>
+        <textarea id="description" maxlength="800" rows="4" placeholder="Bijvoorbeeld: 200 g gekookte pasta, roomsaus en een glas gewone frisdrank."></textarea>
+        <div class="speech-row">
+          <button id="recordBtn" class="button speech" type="button">
+            <span aria-hidden="true">🎤</span> Spreek beschrijving in
+          </button>
+          <p>Tik om te starten en tik opnieuw om de opname te stoppen.</p>
+        </div>
+      </div>
+
+      <details class="help-panel">
+        <summary>Tips voor een betere schatting</summary>
+        <ul>
+          <li>Fotografeer het volledige bord in goed licht.</li>
+          <li>Vermeld hoeveelheden die u kent, liefst in gram of milliliter.</li>
+          <li>Noem suikerhoudende dranken, saus, paneermeel en andere minder zichtbare ingrediënten.</li>
+          <li>Een tweede controle op het etiket of met een voedingsmiddelentabel blijft verstandig.</li>
+        </ul>
+      </details>
+
+      <div class="action-row">
+        <button id="analyzeButton" class="button primary" type="button" disabled>Analyseer</button>
+        <button id="resetBtn" class="button ghost" type="button">Wissen</button>
+      </div>
+
+      <div id="statusMessage" class="status" role="status" aria-live="polite" hidden></div>
     </section>
 
-    <section id="result-section">
-      <img id="preview" src="" alt="" style="display:none;">
-      <pre id="resultText">Nog geen analyse uitgevoerd.</pre>
-    </section>
-	
-	<div id="creditInfo" class="credit-info"></div>
+    <section id="resultSection" class="result-card" aria-labelledby="result-title" hidden>
+      <div class="result-heading">
+        <div>
+          <p class="eyebrow">Geschat resultaat</p>
+          <h2 id="result-title">Koolhydraten in deze maaltijd</h2>
+        </div>
+        <span id="totalConfidence" class="confidence">Onzeker</span>
+      </div>
 
-	
+      <div class="total-panel">
+        <div>
+          <span class="total-label">Beste schatting</span>
+          <strong><span id="totalBest">–</span> g</strong>
+        </div>
+        <div>
+          <span class="total-label">Waarschijnlijk bereik</span>
+          <strong id="totalRange">–</strong>
+        </div>
+      </div>
+
+      <p id="summaryText" class="summary"></p>
+      <div id="itemsList" class="items-list" aria-label="Onderdelen van de maaltijd"></div>
+
+      <section id="assumptionsSection" class="note-panel" hidden>
+        <h3>Aannames en onzekerheden</h3>
+        <ul id="assumptionsList"></ul>
+      </section>
+
+      <section id="questionSection" class="question-panel" hidden>
+        <h3>Kan dit nauwkeuriger?</h3>
+        <p id="followUpQuestion"></p>
+      </section>
+
+      <p id="safetyNote" class="safety-note"></p>
+    </section>
+
+    <section class="medical-warning" aria-label="Belangrijke waarschuwing">
+      <span aria-hidden="true">⚠️</span>
+      <p><strong>Dit blijft een schatting.</strong> Gebruik het resultaat niet als enige basis voor een insulinedosis. Controleer bij twijfel het etiket, de portie of vraag advies aan uw zorgverlener.</p>
+    </section>
   </main>
 
   <footer class="app-footer">
-  <div class="footer-card">
-    <p>© 2025 – Persoonlijk gebruik –</p>
-	<p>Ontwikkeld door Freddy Sleeuwaert.</p>
-    <p class="disclaimer">
-      Deze applicatie is bedoeld ter ondersteuning van bewustwording over koolhydraten.<br>
-      De resultaten zijn indicatief en vervangen geen professioneel medisch advies.
-    </p>
-  </div>
-</footer>
-
-
-
-  <script src="script.js?v=2"></script>
-
+    <p>© 2026 Freddy Sleeuwaert · Persoonlijk en educatief gebruik</p>
+    <p class="privacy-copy">De app bewaart de foto of opname niet in een eigen databank. Voor de analyse wordt de inhoud via de beveiligde server aan OpenAI doorgegeven.</p>
+  </footer>
 </body>
 </html>

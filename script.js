@@ -1,364 +1,373 @@
-document.addEventListener("DOMContentLoaded", () => {
+const API_BASE = location.hostname.endsWith("github.io") ? "https://carbo-app.vercel.app" : "";
+const MAX_FILE_BYTES = 12 * 1024 * 1024;
+const MAX_RECORDING_MS = 45_000;
+const REQUEST_TIMEOUT_MS = 55_000;
+const SUPPORTED_IMAGES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-// ---------- FOTO PREVIEW + OPSLAG ----------
-const cameraInput = document.getElementById('cameraInput');
-const fileInput = document.getElementById('fileInput');
-const preview = document.getElementById('preview');
+const elements = {
+  cameraInput: document.getElementById("cameraInput"),
+  fileInput: document.getElementById("fileInput"),
+  preview: document.getElementById("preview"),
+  previewWrap: document.getElementById("previewWrap"),
+  description: document.getElementById("description"),
+  charCount: document.getElementById("charCount"),
+  recordBtn: document.getElementById("recordBtn"),
+  resetBtn: document.getElementById("resetBtn"),
+  analyzeButton: document.getElementById("analyzeButton"),
+  status: document.getElementById("statusMessage"),
+  resultSection: document.getElementById("resultSection"),
+  totalBest: document.getElementById("totalBest"),
+  totalRange: document.getElementById("totalRange"),
+  totalConfidence: document.getElementById("totalConfidence"),
+  summary: document.getElementById("summaryText"),
+  items: document.getElementById("itemsList"),
+  assumptionsSection: document.getElementById("assumptionsSection"),
+  assumptions: document.getElementById("assumptionsList"),
+  questionSection: document.getElementById("questionSection"),
+  question: document.getElementById("followUpQuestion"),
+  safety: document.getElementById("safetyNote"),
+};
+
 let currentImageData = null;
+let previewUrl = null;
+let analysisController = null;
+let mediaRecorder = null;
+let mediaStream = null;
+let recordingTimer = null;
+let audioChunks = [];
+
+function setStatus(message, type = "info") {
+  elements.status.textContent = message;
+  elements.status.dataset.type = type;
+  elements.status.hidden = !message;
+}
+
+function setAnalyzing(active) {
+  elements.analyzeButton.disabled = active || !currentImageData;
+  elements.analyzeButton.classList.toggle("loading", active);
+  elements.analyzeButton.textContent = active ? "Analyseren…" : "Analyseer";
+  elements.cameraInput.disabled = active;
+  elements.fileInput.disabled = active;
+  elements.resetBtn.disabled = active;
+}
+
+function setPreview(file) {
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = URL.createObjectURL(file);
+  elements.preview.src = previewUrl;
+  elements.previewWrap.hidden = false;
+}
+
+function canvasToDataUrl(canvas) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) return reject(new Error("De afbeelding kon niet worden verkleind."));
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error("De afbeelding kon niet worden gelezen."));
+      reader.readAsDataURL(blob);
+    }, "image/jpeg", 0.84);
+  });
+}
+
+async function resizeImage(file, maxDimension = 1280) {
+  const decoded = await decodeImage(file);
+  try {
+    const scale = Math.min(maxDimension / decoded.width, maxDimension / decoded.height, 1);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(decoded.width * scale));
+    canvas.height = Math.max(1, Math.round(decoded.height * scale));
+    const context = canvas.getContext("2d", { alpha: false });
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(decoded.source, 0, 0, canvas.width, canvas.height);
+    return await canvasToDataUrl(canvas);
+  } finally {
+    decoded.close();
+  }
+}
+
+async function decodeImage(file) {
+  if (typeof createImageBitmap === "function") {
+    let bitmap;
+    try {
+      bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    } catch {
+      bitmap = await createImageBitmap(file);
+    }
+    return { source: bitmap, width: bitmap.width, height: bitmap.height, close: () => bitmap.close() };
+  }
+
+  const url = URL.createObjectURL(file);
+  const image = new Image();
+  try {
+    await new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = () => reject(new Error("Deze foto kan niet door de browser worden gelezen."));
+      image.src = url;
+    });
+    return {
+      source: image,
+      width: image.naturalWidth,
+      height: image.naturalHeight,
+      close: () => URL.revokeObjectURL(url),
+    };
+  } catch (error) {
+    URL.revokeObjectURL(url);
+    throw error;
+  }
+}
 
 async function handleImageSelection(event) {
-  const file = event.target.files[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      preview.src = e.target.result;
-      preview.style.display = 'block';
-    };
-    reader.readAsDataURL(file);
-    currentImageData = await resizeImage(file, 1024);
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  if (!SUPPORTED_IMAGES.has(file.type)) {
+    event.target.value = "";
+    setStatus("Kies een JPEG-, PNG- of WebP-afbeelding.", "error");
+    return;
   }
-}
-
-cameraInput.addEventListener('change', handleImageSelection);
-fileInput.addEventListener('change', handleImageSelection);
-
-
-// ---------- SPRAAKHERKENNING ----------
-const micButton = document.getElementById('micButton');
-const description = document.getElementById('description');
-
-if (micButton) {
-  let recognition;
-  let recognizing = false;
-  let stopTimer;
-
-  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognition = new SpeechRecognition();
-    recognition.lang = 'nl-NL';
-    recognition.interimResults = false;
-    recognition.continuous = true; 
-    recognition.maxAlternatives = 1;
-
-    recognition.onresult = (event) => {
-      const transcript = event.results[event.results.length - 1][0].transcript.trim();
-      description.value += (description.value ? ' ' : '') + transcript;
-    };
-
-    recognition.onend = () => {
-      clearTimeout(stopTimer);
-      recognizing = false;
-      micButton.textContent = '🎙️ Start spraak';
-    };
-
-    recognition.onerror = () => {
-      clearTimeout(stopTimer);
-      recognizing = false;
-      micButton.textContent = '🎙️ Start spraak';
-    };
-
-    micButton.addEventListener('click', () => {
-      if (!recognition) return;
-      if (recognizing) {
-        recognition.stop();
-        clearTimeout(stopTimer);
-        recognizing = false;
-        micButton.textContent = '🎙️ Start spraak';
-      } else {
-        recognition.start();
-        recognizing = true;
-        micButton.textContent = '🛑 Stop opname';
-      }
-    });
-  } else {
-    micButton.disabled = true;
-    micButton.textContent = '🎙️ Niet ondersteund';
-  }
-}
-
-
- // ---------- AUDIO OPNAME via Whisper ----------
-  const recordBtn = document.getElementById('recordBtn');
-  const descriptionBox = document.getElementById('description');
-  let mediaRecorder;
-  let audioChunks = [];
-  let stream = null;
-  let audioContext = null;
-  let oscillator = null;
-  let keepAliveGain = null;
-
-  recordBtn.addEventListener('click', async () => {
-    if (mediaRecorder && mediaRecorder.state === "recording") {
-      mediaRecorder.stop();
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
-      }
-      setTimeout(() => {
-        recordBtn.textContent = "🎤 Inspreken";
-        recordBtn.classList.remove("recording");
-      }, 500);
-      return;
-    }
-
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false, channelCount: 1 }
-      });
-
-      try {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        oscillator = audioContext.createOscillator();
-        keepAliveGain = audioContext.createGain();
-        keepAliveGain.gain.value = 0.00001; 
-        oscillator.connect(keepAliveGain).connect(audioContext.destination);
-        oscillator.start();
-      } catch (e) { console.warn("Silent-tone fout:", e); }
-
-      mediaRecorder = new MediaRecorder(stream);
-      audioChunks = [];
-      mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-
-      mediaRecorder.onstop = async () => {
-        const blob = new Blob(audioChunks, { type: 'audio/webm' });
-        const formData = new FormData();
-        formData.append('audio', blob, 'opname.webm');
-
-        try {
-          const response = await fetch('https://carbo-app.vercel.app/api/whisper', {
-            method: 'POST',
-            body: formData
-          });
-          const data = await response.json();
-          if (data.text) {
-            descriptionBox.value += (descriptionBox.value ? ' ' : '') + data.text;
-          }
-        } catch (err) {
-          alert("Er ging iets mis bij de verwerking van de opname.");
-        }
-
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-          stream = null;
-        }
-        if (oscillator) { try { oscillator.stop(); } catch(e){} oscillator = null; }
-        if (audioContext) { try { audioContext.close(); } catch(e){} audioContext = null; }
-        recordBtn.textContent = "🎤 Inspreken";
-        recordBtn.classList.remove("recording");
-      };
-
-      mediaRecorder.start();
-      recordBtn.textContent = "🛑 Stop opname";
-      recordBtn.classList.add("recording");
-
-    } catch (err) {
-      alert("Microfoon niet beschikbaar of toestemming geweigerd.");
-    }
-  });
-
-// ---------- FOTO VERKLEINING ----------
-async function resizeImage(file, maxSize) {
-  return new Promise((resolve) => {
-    const img = document.createElement('img');
-    const reader = new FileReader();
-    reader.onload = (e) => { img.src = e.target.result; };
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL('image/jpeg', 0.85));
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-// ---------- GPT-4o VISION ANALYSE ----------
-const analyzeButton = document.getElementById('analyzeButton');
-const resultText = document.getElementById('resultText');
-
-analyzeButton.addEventListener('click', async () => {
-  if (!currentImageData) {
-    alert('Maak of kies eerst een foto.');
+  if (file.size > MAX_FILE_BYTES) {
+    event.target.value = "";
+    setStatus("Deze foto is groter dan 12 MB. Kies een kleinere foto.", "error");
     return;
   }
 
-  resultText.textContent = '🔄 Foto wordt geanalyseerd... even geduld...';
+  elements.analyzeButton.disabled = true;
+  setStatus("Foto wordt klaargemaakt…");
+  try {
+    currentImageData = await resizeImage(file);
+    setPreview(file);
+    elements.resultSection.hidden = true;
+    elements.analyzeButton.disabled = false;
+    setStatus("Foto gereed. Voeg eventueel informatie toe en tik op Analyseer.", "success");
+  } catch (error) {
+    currentImageData = null;
+    event.target.value = "";
+    setStatus(error.message || "Deze foto kon niet worden verwerkt.", "error");
+  }
+}
 
-  const prompt = `
-Analyseer deze maaltijdfoto en schat per onderdeel het aantal koolhydraten (gram).
-Gebruik duidelijke opsomming en totaal. Beschrijving gebruiker: ${description.value || "(geen)"}.
-`;
+function number(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0;
+}
+
+function confidenceLabel(value) {
+  if (value === "hoog") return "Hoge zekerheid";
+  if (value === "middel") return "Redelijke zekerheid";
+  return "Lage zekerheid";
+}
+
+function addTextElement(parent, tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  node.textContent = text;
+  parent.appendChild(node);
+  return node;
+}
+
+function renderAnalysis(analysis) {
+  const total = analysis?.total || {};
+  const items = Array.isArray(analysis?.items) ? analysis.items : [];
+  const assumptions = Array.isArray(analysis?.assumptions) ? analysis.assumptions : [];
+
+  elements.totalBest.textContent = number(total.carbs_best_g);
+  elements.totalRange.textContent = `${number(total.carbs_min_g)}–${number(total.carbs_max_g)} g`;
+  elements.totalConfidence.textContent = confidenceLabel(total.confidence);
+  elements.totalConfidence.dataset.level = total.confidence || "laag";
+  elements.summary.textContent = analysis?.summary || "De maaltijd kon slechts beperkt worden beoordeeld.";
+
+  elements.items.replaceChildren();
+  if (!analysis?.meal_detected || items.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-result";
+    empty.textContent = "Er werd geen duidelijke maaltijd herkend. Probeer een andere foto.";
+    elements.items.appendChild(empty);
+  } else {
+    for (const item of items) {
+      const card = document.createElement("article");
+      card.className = "food-item";
+      const heading = document.createElement("div");
+      heading.className = "food-heading";
+      addTextElement(heading, "h3", "", item.name || "Onderdeel");
+      addTextElement(heading, "strong", "food-carbs", `${number(item.carbs_best_g)} g`);
+      card.appendChild(heading);
+      addTextElement(card, "p", "portion", item.portion || "Portie onbekend");
+      addTextElement(card, "p", "range", `Geschat bereik: ${number(item.carbs_min_g)}–${number(item.carbs_max_g)} g`);
+      addTextElement(card, "p", "reasoning", item.reasoning || "Geen aanvullende uitleg.");
+      addTextElement(card, "span", `mini-confidence ${item.confidence || "laag"}`, confidenceLabel(item.confidence));
+      elements.items.appendChild(card);
+    }
+  }
+
+  elements.assumptions.replaceChildren();
+  for (const assumption of assumptions) addTextElement(elements.assumptions, "li", "", assumption);
+  elements.assumptionsSection.hidden = assumptions.length === 0;
+
+  const question = String(analysis?.follow_up_question || "").trim();
+  elements.question.textContent = question;
+  elements.questionSection.hidden = !question;
+  elements.safety.textContent = analysis?.safety_note || "Dit resultaat is indicatief en niet bedoeld voor zelfstandige insulinedosering.";
+  elements.resultSection.hidden = false;
+  elements.resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function analyzeMeal() {
+  if (!currentImageData || analysisController) return;
+
+  analysisController = new AbortController();
+  const timeout = setTimeout(() => analysisController?.abort(), REQUEST_TIMEOUT_MS);
+  setAnalyzing(true);
+  setStatus("De maaltijd wordt geanalyseerd. Dit kan enkele seconden duren…");
 
   try {
-    const response = await fetch("https://carbo-app.vercel.app/api/proxy", {
+    const response = await fetch(`${API_BASE}/api/proxy`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      signal: analysisController.signal,
       body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: prompt },
-              { type: "image_url", image_url: { url: currentImageData } }
-            ]
-          }
-        ]
-      })
+        image: currentImageData,
+        description: elements.description.value.trim(),
+      }),
     });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `De server antwoordde met status ${response.status}.`);
+    if (!data.analysis) throw new Error("Er werd geen bruikbaar resultaat ontvangen.");
 
-    if (!response.ok) throw new Error(`API-fout: ${response.status}`);
-    const data = await response.json();
-    const answer = data.choices?.[0]?.message?.content?.trim() || "Geen antwoord ontvangen.";
-    resultText.textContent = answer;
-
-  } catch (err) {
-    resultText.textContent = "❌ Fout bij analyse: " + err.message;
-  }
-});
-
-// ---------- Popup "Meer uitleg…" ----------
-const infoLink = document.getElementById("infoLink");
-const infoPopup = document.getElementById("infoPopup");
-const closePopup = document.getElementById("closePopup");
-
-if (infoLink && infoPopup && closePopup) {
-  infoLink.addEventListener("click", () => { infoPopup.style.display = "block"; });
-  closePopup.addEventListener("click", () => { infoPopup.style.display = "none"; });
-  infoPopup.addEventListener("click", (e) => {
-    if (e.target === infoPopup) { infoPopup.style.display = "none"; }
-  });
-}
-
-// ---------- RESET-FUNCTIE ----------
-const resetBtn = document.getElementById("resetBtn");
-if (resetBtn) {
-  resetBtn.addEventListener("click", () => {
-    currentImageData = null;
-    const preview = document.getElementById("preview");
-    if (preview) preview.src = "";
-    const cameraInput = document.getElementById("cameraInput");
-    const fileInput = document.getElementById("fileInput");
-    if (cameraInput) cameraInput.value = "";
-    if (fileInput) fileInput.value = "";
-    const descriptionBox = document.getElementById("description");
-    if (descriptionBox) descriptionBox.value = "";
-    const resultText = document.getElementById("resultText");
-    if (resultText) { resultText.textContent = "Nog geen analyse uitgevoerd."; }
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  });
-}
-
-// ------------------------------------------------
-//  CREDITSYSTEEM + GEHEIM BEHEERDERSMENU
-// ------------------------------------------------
-let maxCredits = 50;
-let secretClicks = 0;
-let secretTimer;
-
-function loadCredits() {
-  let c = localStorage.getItem("carbo_credits");
-  if (c === null) {
-    localStorage.setItem("carbo_credits", maxCredits);
-    return maxCredits;
-  }
-  return parseInt(c, 10);
-}
-
-function saveCredits(v) {
-  localStorage.setItem("carbo_credits", v);
-}
-
-function updateCreditDisplay() {
-  const box = document.getElementById("creditCount");
-  const wrapper = document.getElementById("creditBox");
-  const info = document.getElementById("creditInfo");
-  if (!box || !wrapper || !info) return;
-
-  let c = loadCredits();
-  box.textContent = c;
-
-  wrapper.style.color = (c === 0) ? "red" : (c <= 10 ? "#d98200" : "black");
-
-  if (c === 0) {
-    info.textContent = "⛔ Uw tegoed is opgebruikt. Mail naar fredje_s@skynet.be voor een nieuw tegoed.";
-    info.className = "credit-info zero";
-  } else if (c <= 5) {
-    info.textContent = "⚠️ Je gratis scans zijn bijna opgebruikt. Mail naar fredje_s@skynet.be voor meer gratis scans.";
-    info.className = "credit-info warning";
-  } else {
-    info.textContent = "ℹ️ Elke analyse verbruikt 1 gratis credit. Je kreeg er 50 gratis.";
-    info.className = "credit-info";
+    renderAnalysis(data.analysis);
+    setStatus("Analyse voltooid.", "success");
+  } catch (error) {
+    const message = error.name === "AbortError"
+      ? "De analyse duurde te lang. Controleer uw verbinding en probeer opnieuw."
+      : error.message || "Er ging iets mis tijdens de analyse.";
+    setStatus(message, "error");
+  } finally {
+    clearTimeout(timeout);
+    analysisController = null;
+    setAnalyzing(false);
   }
 }
 
-// ---------- GEHEIM BEHEERDERS-MENU ----------
-const creditTrigger = document.getElementById("creditBox");
-if (creditTrigger) {
-  // MAAK DE KLIKZONE GROTER EN VOORKOM SELECTIE
-  creditTrigger.style.padding = "15px"; // Extra ruimte om makkelijker te klikken
-  creditTrigger.style.margin = "-15px"; // Voorkom dat de tekst verspringt door de padding
-  creditTrigger.style.display = "inline-block";
-  creditTrigger.style.userSelect = "none";
-  creditTrigger.style.webkitUserSelect = "none";
+function supportedRecordingType() {
+  const candidates = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm", "audio/ogg;codecs=opus"];
+  return candidates.find((type) => MediaRecorder.isTypeSupported(type)) || "";
+}
 
-  creditTrigger.addEventListener("click", () => {
-    secretClicks++;
-    clearTimeout(secretTimer);
-    secretTimer = setTimeout(() => { secretClicks = 0; }, 3000); 
+function stopMediaTracks() {
+  mediaStream?.getTracks().forEach((track) => track.stop());
+  mediaStream = null;
+}
 
-    if (secretClicks >= 5) {
-      let code = prompt("Beheerdersmodus: Voer de herlaadcode in:");
-      if (code === "1947") { 
-        saveCredits(100);
-        updateCreditDisplay();
-        alert("Het tegoed is succesvol herladen naar 100 scans.");
-      } else if (code !== null) {
-        alert("Onjuiste code.");
-      }
-      secretClicks = 0;
+function resetRecordButton() {
+  clearTimeout(recordingTimer);
+  elements.recordBtn.classList.remove("recording");
+  elements.recordBtn.disabled = false;
+  elements.recordBtn.innerHTML = '<span aria-hidden="true">🎤</span> Spreek beschrijving in';
+}
+
+async function transcribeRecording(blob, mimeType) {
+  elements.recordBtn.disabled = true;
+  elements.recordBtn.textContent = "Omzetten naar tekst…";
+  setStatus("De opname wordt omgezet naar tekst…");
+
+  try {
+    const formData = new FormData();
+    const extension = mimeType.includes("mp4") ? "m4a" : mimeType.includes("ogg") ? "ogg" : "webm";
+    formData.append("audio", blob, `opname.${extension}`);
+    const response = await fetch(`${API_BASE}/api/whisper`, { method: "POST", body: formData });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "De opname kon niet worden verwerkt.");
+
+    if (data.text) {
+      const separator = elements.description.value.trim() ? " " : "";
+      elements.description.value = `${elements.description.value.trim()}${separator}${data.text}`.slice(0, 800);
+      updateCharacterCount();
+      setStatus("De ingesproken tekst is toegevoegd.", "success");
+    } else {
+      setStatus("Er werd geen duidelijke spraak herkend.", "error");
     }
+  } catch (error) {
+    setStatus(error.message || "De opname kon niet worden verwerkt.", "error");
+  } finally {
+    resetRecordButton();
+  }
+}
+
+async function toggleRecording() {
+  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+    setStatus("Spraakopname wordt niet door deze browser ondersteund.", "error");
+    return;
+  }
+
+  if (mediaRecorder?.state === "recording") {
+    mediaRecorder.stop();
+    return;
+  }
+
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
+    });
+    const mimeType = supportedRecordingType();
+    mediaRecorder = mimeType ? new MediaRecorder(mediaStream, { mimeType }) : new MediaRecorder(mediaStream);
+    audioChunks = [];
+    mediaRecorder.addEventListener("dataavailable", (event) => {
+      if (event.data.size) audioChunks.push(event.data);
+    });
+    mediaRecorder.addEventListener("stop", async () => {
+      const actualType = mediaRecorder.mimeType || mimeType || "audio/webm";
+      const blob = new Blob(audioChunks, { type: actualType });
+      stopMediaTracks();
+      await transcribeRecording(blob, actualType.split(";")[0]);
+    }, { once: true });
+    mediaRecorder.start();
+    elements.recordBtn.classList.add("recording");
+    elements.recordBtn.innerHTML = '<span aria-hidden="true">⏹</span> Stop opname';
+    setStatus("Opname loopt… Tik opnieuw om te stoppen (maximaal 45 seconden).", "recording");
+    recordingTimer = setTimeout(() => {
+      if (mediaRecorder?.state === "recording") mediaRecorder.stop();
+    }, MAX_RECORDING_MS);
+  } catch {
+    stopMediaTracks();
+    resetRecordButton();
+    setStatus("Microfoontoegang is geweigerd of niet beschikbaar.", "error");
+  }
+}
+
+function updateCharacterCount() {
+  elements.charCount.textContent = `${elements.description.value.length}/800`;
+}
+
+function resetApp() {
+  analysisController?.abort();
+  if (mediaRecorder?.state === "recording") mediaRecorder.stop();
+  currentImageData = null;
+  elements.cameraInput.value = "";
+  elements.fileInput.value = "";
+  elements.description.value = "";
+  updateCharacterCount();
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = null;
+  elements.preview.removeAttribute("src");
+  elements.previewWrap.hidden = true;
+  elements.resultSection.hidden = true;
+  elements.analyzeButton.disabled = true;
+  setStatus("");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+elements.cameraInput.addEventListener("change", handleImageSelection);
+elements.fileInput.addEventListener("change", handleImageSelection);
+elements.description.addEventListener("input", updateCharacterCount);
+elements.analyzeButton.addEventListener("click", analyzeMeal);
+elements.recordBtn.addEventListener("click", toggleRecording);
+elements.resetBtn.addEventListener("click", resetApp);
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("service-worker.js").catch((error) => console.warn("Serviceworker-fout", error));
   });
 }
 
-function useCredit() {
-  let c = loadCredits();
-  if (c <= 0) return false;
-  c--;
-  saveCredits(c);
-  updateCreditDisplay();
-  return true;
-}
-
-function checkCreditBeforeAnalysis() {
-  let c = loadCredits();
-  if (c <= 0) {
-    alert("Uw tegoed is opgebruikt.\n\nStuur een e-mail naar fredje_s@skynet.be om nieuwe gratis scans te ontvangen.");
-    return false;
-  }
-  return true;
-}
-
-// ANALYSE-KNOP LOGICA
-analyzeButton.addEventListener("click", async (event) => {
-  if (!currentImageData) {
-    alert("Maak of kies eerst een foto.");
-    event.stopImmediatePropagation();
-    return;
-  }
-  if (!checkCreditBeforeAnalysis()) {
-    event.stopImmediatePropagation();
-    return;
-  }
-  if (!useCredit()) {
-    event.stopImmediatePropagation();
-    return;
-  }
-}, { capture: true });
-
-updateCreditDisplay();
-
-});
+updateCharacterCount();

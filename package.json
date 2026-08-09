@@ -1,5 +1,16 @@
 {
+  "name": "carbo-app",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/api.test.js",
+    "check": "node --check script.js && node --check api/proxy.js && node --check api/whisper.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
-    "busboy": "^1.6.0"
+    "busboy": "1.6.0"
   }
 }
