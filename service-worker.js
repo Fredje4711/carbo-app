@@ -1,9 +1,9 @@
-const CACHE_NAME = "carbo-app-v6";
+const CACHE_NAME = "carbo-app-v7";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
-  "./style.css?v=6",
-  "./script.js?v=6",
+  "./style.css?v=7",
+  "./script.js?v=7",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",

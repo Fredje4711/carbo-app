@@ -87,6 +87,8 @@ function feedbackMailUrl() {
     "Wat vond ik goed?",
     "",
     "Wat kan volgens mij beter?",
+    "",
+    "Ik ontvang graag toegang tot onbeperkt gratis gebruik.",
   ].join("\n");
   return `mailto:fredje4711@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
@@ -100,9 +102,9 @@ function updateCreditDisplay() {
   elements.feedbackLink.href = feedbackMailUrl();
 
   if (credits === 0) {
-    elements.creditInfo.textContent = "Uw gratis scans zijn opgebruikt. Mail Freddy met uw ervaring om verder te gaan.";
+    elements.creditInfo.textContent = "Uw gratis scans zijn opgebruikt. Stuur uw ervaring en ontvang per mail toegang tot onbeperkt gratis gebruik.";
   } else if (credits <= LOW_CREDIT_LEVEL) {
-    elements.creditInfo.textContent = `Nog ${credits} gratis ${credits === 1 ? "scan" : "scans"}. Deel gerust uw ervaring.`;
+    elements.creditInfo.textContent = `Nog ${credits} gratis ${credits === 1 ? "scan" : "scans"}. Stuur kort uw ervaring en ontvang per mail toegang tot onbeperkt gratis gebruik.`;
   } else {
     elements.creditInfo.textContent = "";
   }
@@ -326,7 +328,7 @@ async function analyzeMeal() {
   if (!currentImageData || analysisController) return;
   if (readCredits() <= 0) {
     updateCreditDisplay();
-    setStatus("Uw gratis scans zijn opgebruikt. Stuur Freddy een feedbackmail om verder te gaan.", "error");
+    setStatus("Uw gratis scans zijn opgebruikt. Stuur uw ervaring en ontvang per mail toegang tot onbeperkt gratis gebruik.", "error");
     elements.creditPanel.scrollIntoView({ behavior: "smooth", block: "center" });
     return;
   }
