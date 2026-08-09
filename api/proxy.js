@@ -22,8 +22,6 @@ const MEAL_SCHEMA = {
     "total",
     "summary",
     "assumptions",
-    "follow_up_question",
-    "safety_note",
   ],
   properties: {
     meal_detected: { type: "boolean" },
@@ -70,8 +68,6 @@ const MEAL_SCHEMA = {
       maxItems: 8,
       items: { type: "string", maxLength: 200 },
     },
-    follow_up_question: { type: "string", maxLength: 300 },
-    safety_note: { type: "string", maxLength: 300 },
   },
 };
 
@@ -81,7 +77,7 @@ Schat porties conservatief, geef per onderdeel een minimum, beste schatting en m
 Zorg dat minimum <= beste schatting <= maximum en dat het totaal logisch overeenkomt met de onderdelen.
 Maak onzekerheid expliciet, vooral bij portiegrootte, saus, bereidingswijze en verborgen ingredienten.
 Als er geen maaltijd zichtbaar is, zet meal_detected op false, gebruik lege items en nulwaarden.
-Doe nooit uitspraken over insulinedosering. Vermeld dat het resultaat een schatting is en niet voor zelfstandige insulinedosering gebruikt mag worden.
+Doe nooit uitspraken over insulinedosering.
 Antwoord in helder Nederlands en volg exact het opgegeven JSON-schema.`;
 
 function validateInput(body) {

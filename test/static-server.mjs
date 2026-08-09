@@ -33,8 +33,6 @@ createServer(async (req, res) => {
         total: { carbs_min_g: 48, carbs_best_g: 56, carbs_max_g: 65, confidence: "middel" },
         summary: "Lokale testanalyse zonder OpenAI-aanvraag.",
         assumptions: ["De portie is visueel geschat."],
-        follow_up_question: "Weet u het exacte gewicht van de portie?",
-        safety_note: "Dit resultaat is indicatief en niet bedoeld voor zelfstandige insulinedosering.",
       },
     }));
     return;

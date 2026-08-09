@@ -23,9 +23,6 @@ const elements = {
   items: document.getElementById("itemsList"),
   assumptionsSection: document.getElementById("assumptionsSection"),
   assumptions: document.getElementById("assumptionsList"),
-  questionSection: document.getElementById("questionSection"),
-  question: document.getElementById("followUpQuestion"),
-  safety: document.getElementById("safetyNote"),
 };
 
 let currentImageData = null;
@@ -205,10 +202,6 @@ function renderAnalysis(analysis) {
   for (const assumption of assumptions) addTextElement(elements.assumptions, "li", "", assumption);
   elements.assumptionsSection.hidden = assumptions.length === 0;
 
-  const question = String(analysis?.follow_up_question || "").trim();
-  elements.question.textContent = question;
-  elements.questionSection.hidden = !question;
-  elements.safety.textContent = analysis?.safety_note || "Dit resultaat is indicatief en niet bedoeld voor zelfstandige insulinedosering.";
   elements.resultSection.hidden = false;
   elements.resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }

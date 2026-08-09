@@ -227,13 +227,10 @@ textarea {
 .mini-confidence { display: inline-block; margin-top: 8px; padding: 3px 7px; }
 .empty-result { padding: 18px; border-radius: 12px; color: var(--muted); background: #f5f7f8; text-align: center; }
 
-.note-panel, .question-panel { margin-top: 14px; padding: 14px; border-radius: 12px; }
+.note-panel { margin-top: 14px; padding: 14px; border-radius: 12px; }
 .note-panel { color: #5d4a10; background: var(--warning-bg); }
-.question-panel { color: var(--blue-900); background: var(--blue-100); }
-.note-panel h3, .question-panel h3 { margin-bottom: 5px; }
+.note-panel h3 { margin-bottom: 5px; }
 .note-panel ul { margin: 0; padding-left: 19px; }
-.question-panel p { margin-bottom: 0; }
-.safety-note { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--error); font-size: .83rem; font-weight: 650; }
 
 .medical-warning { display: flex; gap: 9px; margin-top: 10px; padding: 11px 13px; background: #fffaf0; border-color: #ead9aa; }
 .medical-warning p { margin: 0; color: #5a4a1c; font-size: .85rem; }
