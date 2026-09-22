@@ -1,6 +1,6 @@
-import { normalizeAnalysis, formatGrams } from './lib/analysis.js?v=12';
-import { createLocalData, validDraft, addHistory } from './lib/local-data.js?v=12';
-import { CREDIT_KEY, FEEDBACK_CODE, parseCredits, creditValue } from './lib/credits.js?v=12';
+import { normalizeAnalysis, formatGrams } from './lib/analysis.js?v=14';
+import { createLocalData, validDraft, addHistory } from './lib/local-data.js?v=14';
+import { CREDIT_KEY, FEEDBACK_CODE, parseCredits, creditValue } from './lib/credits.js?v=14';
 
 const API_BASE = location.hostname.endsWith('github.io') ? 'https://carbo-app.vercel.app' : '';
 const REQUEST_TIMEOUT = 55_000;
@@ -8,11 +8,10 @@ const REMEMBER_KEY = 'carbo_remember_meals';
 const LOCAL_PREVIEW = ['localhost', '127.0.0.1'].includes(location.hostname);
 const $ = id => document.getElementById(id);
 const localData = createLocalData();
-const state = { mode: 'starting', image: null, analysis: null, operation: 0, controller: null, recording: null, remember: false, history: [], pendingDraft: null, credits: 50, creditStorageBlocked: false, retry: false, historical: false };
+const state = { mode: 'starting', image: null, analysis: null, operation: 0, controller: null, recording: null, remember: false, history: [], pendingDraft: null, credits: 50, creditStorageBlocked: false, retry: false, historical: false, resultDirty: false };
 let saveTimer;
 let storageQueue = Promise.resolve();
 let storageWarningShown = false;
-let installPrompt;
 let waitingWorker;
 let updateRequested = false;
 let confirmAction;
@@ -40,9 +39,9 @@ function speechSupported() { return Boolean(navigator.mediaDevices?.getUserMedia
 function syncUI() {
   const busy = state.mode !== 'idle';
   const speaking = ['permission', 'recording', 'transcribing'].includes(state.mode);
-  const completed = Boolean(state.analysis) || state.historical;
-  $('analyzeButton').disabled = busy || (!completed && (!state.image || !online() || state.credits <= 0)) || Boolean(state.pendingDraft);
-  $('analyzeButton').textContent = state.mode === 'analyzing' ? 'Analyseren…' : completed ? 'Nieuwe maaltijd' : state.retry ? 'Opnieuw proberen' : 'Analyseer maaltijd';
+  const completed = Boolean(state.analysis) || state.historical || state.resultDirty;
+  $('analyzeButton').disabled = busy || !state.image || !online() || state.credits <= 0 || Boolean(state.pendingDraft);
+  $('analyzeButton').textContent = state.mode === 'analyzing' ? 'Analyseren…' : completed ? 'Opnieuw analyseren' : state.retry ? 'Opnieuw proberen' : 'Analyseer maaltijd';
   $('analyzeButton').classList.toggle('loading', state.mode === 'analyzing');
   $('cancelAnalysisBtn').hidden = state.mode !== 'analyzing';
   $('resetBtn').hidden = state.mode === 'analyzing';
@@ -76,11 +75,17 @@ function focusAndScroll(id) {
   node.focus({ preventScroll: true });
   node.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
 }
+function markResultDirty() {
+  if (!state.analysis && !state.resultDirty) return;
+  state.analysis = null; state.resultDirty = true;
+  $('resultContext').textContent = 'Vorige schatting. Uw informatie is gewijzigd; analyseer opnieuw voor een bijgewerkt resultaat.';
+  $('resultContext').hidden = false;
+}
 function clearResult() {
+  state.resultDirty = false;
   state.analysis = null;
   state.historical = false;
   $('resultSection').hidden = true;
-  document.body.classList.toggle('has-result', false);
 }
 function showPreview() {
   $('previewWrap').hidden = !state.image;
@@ -247,13 +252,12 @@ function renderAnalysis(analysis, context = '') {
   $('assumptionsSection').hidden = !analysis.assumptions.length;
   $('assumptionsSection').open = false;
   $('resultSection').hidden = false;
-  document.body.classList.toggle('has-result', true);
   syncUI(); focusAndScroll('result-title');
 }
 function renderHistory() {
   $('historyCount').textContent = `(${state.history.length})`;
   $('historyList').replaceChildren();
-  if (!state.history.length) addText($('historyList'), 'p', state.remember ? 'Nog geen bewaarde maaltijden.' : 'Schakel bewaren in bij Installatie & privacy om recente maaltijden hier terug te vinden.', 'field-help');
+  if (!state.history.length) addText($('historyList'), 'p', state.remember ? 'Nog geen bewaarde maaltijden.' : 'Schakel bewaren in bij Privacy & bewaren om recente maaltijden hier terug te vinden.', 'field-help');
   for (const entry of state.history) {
     const date = new Date(entry.date).toLocaleString('nl-BE', { dateStyle: 'short', timeStyle: 'short' });
     const button = addText($('historyList'), 'button', `${formatGrams(entry.analysis.total.carbs_best_g)} g · ${entry.analysis.items.map(item => item.name).join(', ')}`, 'history-entry');
@@ -336,7 +340,7 @@ async function finishRecording(recording, operation) {
     if (typeof data.text !== 'string' || !data.text.trim()) throw new Error('Er werd geen duidelijke spraak herkend. Probeer opnieuw.');
     const combined = [$('description').value.trim(), data.text.trim()].filter(Boolean).join(' ');
     $('description').value = combined.slice(0, 800);
-    clearResult(); saveDraft();
+    markResultDirty(); saveDraft();
     status(combined.length > 800 ? 'De tekst is toegevoegd, maar ingekort tot 800 tekens. Controleer uw beschrijving.' : 'Uw tekst is toegevoegd. Controleer de porties en tik op Analyseer maaltijd.', 'success');
   } catch (error) {
     if (operation === state.operation) status(error.name === 'AbortError' ? 'Opname geannuleerd.' : error.message, 'error');
@@ -348,8 +352,6 @@ function resetApp() {
   $('restoreNotice').hidden = true;
   $('cameraInput').value = ''; $('fileInput').value = ''; $('description').value = '';
   clearResult(); showPreview();
-  $('largePreview').removeAttribute('src');
-  if ($('photoDialog').open) $('photoDialog').close();
   persist(() => localData.delete('draft'));
   status(''); syncUI(); focusAndScroll('scanner-title');
 }
@@ -381,20 +383,6 @@ async function initializeStorage() {
   setMode('idle'); renderHistory();
 }
 function setupInstallation() {
-  const displayMode = matchMedia('(display-mode: standalone)');
-  function installed() {
-    const value = displayMode.matches || navigator.standalone === true;
-    $('installedMessage').hidden = !value; $('installHelp').hidden = value;
-    $('installBtn').hidden = value || !installPrompt;
-  }
-  installed(); displayMode.addEventListener?.('change', installed);
-  window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); installPrompt = event; installed(); });
-  window.addEventListener('appinstalled', () => { installPrompt = null; installed(); $('installBtn').hidden = true; });
-  $('installBtn').addEventListener('click', async () => {
-    if (!installPrompt) return;
-    const prompt = installPrompt; installPrompt = null; $('installBtn').hidden = true;
-    try { await prompt.prompt(); await prompt.userChoice; } catch { status('Gebruik het browsermenu om de app op uw beginscherm te zetten.'); }
-  });
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js').then(registration => {
       const ready = () => { if (registration.waiting) { waitingWorker = registration.waiting; $('updateNotice').hidden = false; } };
@@ -410,7 +398,7 @@ function setupInstallation() {
   $('updateBtn').addEventListener('click', async () => {
     if (state.mode !== 'idle' || !waitingWorker || state.pendingDraft) return;
     if (!state.remember && (state.image || $('description').value)) {
-      status('Rond uw maaltijd af en kies Nieuwe maaltijd voordat u bijwerkt, of schakel sessieopslag in bij Installatie & privacy.'); return;
+      status('Rond uw maaltijd af en kies Nieuwe maaltijd voordat u bijwerkt, of schakel sessieopslag in bij Privacy & bewaren.'); return;
     }
     const saved = await saveDraft();
     if (state.remember && (state.image || $('description').value) && saved === false) {
@@ -422,8 +410,8 @@ function setupInstallation() {
 
 $('cameraInput').addEventListener('change', selectImage);
 $('fileInput').addEventListener('change', selectImage);
-$('description').addEventListener('input', () => { clearResult(); state.retry = false; syncUI(); scheduleSave(); });
-$('analyzeButton').addEventListener('click', () => state.analysis || state.historical ? resetApp() : analyze());
+$('description').addEventListener('input', () => { markResultDirty(); state.retry = false; syncUI(); scheduleSave(); });
+$('analyzeButton').addEventListener('click', analyze);
 $('recordBtn').addEventListener('click', toggleRecording);
 $('cancelRecordBtn').addEventListener('click', () => { cancelWork(); status('Opname geannuleerd. Er wordt geen tekst toegevoegd.'); });
 $('cancelAnalysisBtn').addEventListener('click', () => { cancelWork(); state.retry = true; syncUI(); status('Analyse geannuleerd. Uw foto en tekst blijven staan.'); });
@@ -431,13 +419,11 @@ $('resetBtn').addEventListener('click', resetApp);
 $('newMealBtn').addEventListener('click', resetApp);
 $('correctPortionBtn').addEventListener('click', () => {
   if (state.mode !== 'idle' || !state.image || state.historical) return;
-  clearResult(); status('Verduidelijk hieronder de portie, bijvoorbeeld “slechts 100 g gekookte pasta”. Analyseer daarna opnieuw; dit gebruikt één scan.');
+  status('Verduidelijk hieronder de portie, bijvoorbeeld “slechts 100 g gekookte pasta”. Analyseer daarna opnieuw; dit gebruikt één scan.');
   focusAndScroll('description');
 });
-$('previewButton').addEventListener('click', () => { if (state.image) { $('largePreview').src = state.image; $('photoDialog').showModal(); } });
 $('settingsBtn').addEventListener('click', () => $('settingsDialog').showModal());
 $('closeSettingsBtn').addEventListener('click', () => $('settingsDialog').close());
-$('closePhotoBtn').addEventListener('click', () => $('photoDialog').close());
 $('refillBtn').addEventListener('click', () => { $('refillCode').value = ''; $('refillError').hidden = true; $('refillDialog').showModal(); });
 $('refillCancel').addEventListener('click', () => $('refillDialog').close());
 $('refillForm').addEventListener('submit', event => {

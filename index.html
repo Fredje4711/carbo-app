@@ -5,18 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content="Fotografeer uw maaltijd en bekijk een voorzichtige schatting van de koolhydraten.">
   <meta name="theme-color" content="#1261a6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="KH Scanner">
   <title>Koolhydraten Scanner</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="stylesheet" href="style.css?v=12">
-  <script type="module" src="script.js?v=12"></script>
+  <link rel="stylesheet" href="style.css?v=14">
+  <script type="module" src="entry.js?v=14"></script>
 </head>
 <body>
   <header class="app-header"><div class="header-inner">
     <img class="app-mark" src="icon-192.png" width="44" height="44" alt="">
     <div><h1>Koolhydraten Scanner</h1></div>
   </div></header>
+  <noscript><p class="notice page-shell">Schakel JavaScript in en open deze link opnieuw om de app te installeren of te gebruiken.</p></noscript>
+  <section id="installationGate" class="page-shell" hidden aria-labelledby="installTitle">
+    <div class="scanner-card installation-card">
+      <img src="icon-192.png" width="72" height="72" alt="Pictogram KH Scanner">
+      <h2 id="installTitle">Uw maaltijdscanner op uw gsm</h2>
+      <div id="desktopInstructions"><p>U opent deze link op een computer, of uw toestel is niet als gsm herkend.</p><p><strong>Open deze e-mail op uw gsm en tik daar op de link.</strong> U krijgt dan de juiste stappen om de app te installeren.</p><p>Na installatie opent u de scanner met het pictogram op uw beginscherm.</p></div>
+      <div id="iosInstructions" hidden><h3>Installeren op iPhone</h3><ol><li>Open deze link in <strong>Safari</strong>. Staat hij in uw mail-app? Kies in het menu ‘Open in Safari’, of kopieer de link naar Safari.</li><li>Tik op <strong>Delen</strong> (het vierkant met de pijl omhoog). Soms staat Delen onder de knop met drie puntjes.</li><li>Scrol in het deelmenu naar <strong>Zet op beginscherm</strong>. Ontbreekt die optie? Kies ‘Wijzig taken’ en voeg ze toe.</li><li>Laat <strong>Open als webapp</strong> ingeschakeld als die optie verschijnt. Tik op <strong>Voeg toe</strong>.</li><li>Sluit Safari en tik op het pictogram <strong>KH Scanner</strong> op uw beginscherm.</li></ol></div>
+      <div id="androidInstructions" hidden><h3>Installeren op Android</h3><button id="gatewayInstallBtn" class="button primary" type="button" hidden>Installeer KH Scanner</button><ol><li>Open deze link in <strong>Chrome</strong>. Staat hij in uw mail-app? Kies ‘Open in browser’, of kopieer de link naar Chrome.</li><li>Tik op het menu <strong>⋮</strong> rechtsboven.</li><li>Kies <strong>Installeren en snelkoppeling maken</strong> en daarna <strong>Installeren</strong>. Afhankelijk van uw Chrome-versie heet dit ‘Toevoegen aan startscherm’ of ‘App installeren’. Bevestig de installatie.</li><li>Sluit Chrome en tik op het pictogram <strong>KH Scanner</strong> op uw beginscherm.</li></ol></div>
+      <p id="gatewayStatus" role="status" aria-live="polite"></p>
+      <p class="field-help">Al geïnstalleerd? Open KH Scanner via uw beginscherm, in plaats van via de e-mail.</p>
+      <details class="help-panel"><summary>Uitleg voor een ander toestel</summary><div class="button-row"><button id="chooseIos" class="button secondary" type="button">iPhone</button><button id="chooseAndroid" class="button secondary" type="button">Android</button></div></details>
+      <noscript><p>Schakel JavaScript in en open deze link opnieuw om uw toestel te herkennen en de app te gebruiken.</p></noscript>
+    </div>
+  </section>
+  <div id="application" hidden>
   <main class="page-shell">
     <noscript><p class="notice">Schakel JavaScript in om een foto te kunnen analyseren.</p></noscript>
     <div id="offlineNotice" class="notice" role="status" hidden>U bent offline. U kunt een foto voorbereiden en bewaarde resultaten bekijken. Voor analyse en spraak is internet nodig.</div>
@@ -28,7 +45,7 @@
         <label class="upload-button" for="cameraInput"><span aria-hidden="true">📷</span> Maak foto<input id="cameraInput" class="visually-hidden" type="file" accept="image/*,.heic,.heif" capture="environment"></label>
         <label class="upload-button secondary" for="fileInput"><span aria-hidden="true">🖼️</span> Kies foto<input id="fileInput" class="visually-hidden" type="file" accept="image/*,.heic,.heif"></label>
       </div>
-      <figure id="previewWrap" class="preview-wrap" hidden><button id="previewButton" type="button" aria-label="Maaltijdfoto vergroten"><img id="preview" alt="Geselecteerde maaltijdfoto"></button><figcaption>Tik op de foto om te vergroten.</figcaption></figure>
+      <figure id="previewWrap" class="preview-wrap" hidden><img id="preview" alt="Geselecteerde maaltijdfoto"></figure>
       <div class="description-block">
         <div class="field-heading"><label for="description">Extra informatie <span>(optioneel)</span></label><output id="charCount" for="description">0/800</output></div>
         <textarea id="description" maxlength="800" rows="2" placeholder="Bijv. 200 g gekookte pasta, saus, drank…"></textarea>
@@ -54,19 +71,16 @@
     <aside class="medical-warning"><p><strong>Dit blijft een schatting.</strong> Niet als enige basis voor een insulinedosis.</p></aside>
 
   </main>
-  <footer class="app-footer"><button id="settingsBtn" type="button" class="text-button">Meer & instellingen</button><p>© Freddy Sleeuwaert · <span id="appVersion">3.0.1</span></p></footer>
+  <footer class="app-footer"><button id="settingsBtn" type="button" class="text-button">Meer & instellingen</button><p>© Freddy Sleeuwaert · <span id="appVersion">3.1.0</span></p></footer>
 
   <dialog id="settingsDialog" aria-labelledby="settingsTitle"><div class="settings-heading"><h2 id="settingsTitle">Meer & instellingen</h2><button id="closeSettingsBtn" type="button" class="button ghost">Sluiten</button></div>    <details id="historyPanel" class="utility-panel"><summary>Recente maaltijden <span id="historyCount">(0)</span></summary><p class="field-help">Maximaal 10 resultaten op dit toestel, zonder foto of opname.</p><div id="historyList"></div><button id="clearHistoryBtn" class="button ghost" type="button" disabled>Geschiedenis wissen</button></details>
-    <details class="utility-panel"><summary>Installatie &amp; privacy</summary>
-      <button id="installBtn" class="button secondary" type="button" hidden>Installeer op dit toestel</button>
-      <p id="installHelp">Op iPhone: open deze app in Safari, tik op Delen en kies ‘Zet op beginscherm’. Op Android: open het browsermenu en kies ‘App installeren’ of ‘Toevoegen aan startscherm’.</p>
-      <p id="installedMessage" hidden>U gebruikt de app vanaf uw beginscherm.</p>
+    <details class="utility-panel"><summary>Privacy &amp; bewaren</summary>
       <label class="setting"><input id="rememberToggle" type="checkbox"> Bewaar mijn sessie en recente resultaten op dit toestel</label>
       <p class="field-help">Optioneel. De huidige foto en beschrijving blijven maximaal 24 uur beschikbaar voor herstel. Recente resultaten blijven staan tot u ze wist. Deze gegevens worden niet tussen toestellen gesynchroniseerd. U kunt alles hieronder verwijderen.</p>
       <button id="clearDataBtn" class="button ghost" type="button">Bewaarde maaltijden verwijderen</button>
       <p class="field-help">Voor analyse worden uw foto en beschrijving via onze server naar OpenAI gestuurd. Bij inspreken wordt ook uw opname doorgestuurd. De app bewaart deze niet in een eigen serverdatabank. De verwerking door OpenAI volgt diens gegevensbeleid.</p>
     </details></dialog>
-  <dialog id="photoDialog" class="photo-dialog" aria-label="Maaltijdfoto"><button id="closePhotoBtn" class="button ghost" type="button" autofocus>Sluiten</button><img id="largePreview" alt="Vergrote maaltijdfoto"></dialog>
   <dialog id="refillDialog" aria-labelledby="refillTitle"><form id="refillForm"><h2 id="refillTitle">Feedback &amp; gratis scans</h2><p id="feedbackExplanation">Stuur uw ervaring en ontvang een code voor onbeperkt gratis scans.</p><a id="feedbackLink" class="button secondary" href="mailto:fredje4711@gmail.com">Feedback sturen</a><label for="refillCode">Uw ontvangen code</label><input id="refillCode" type="password" inputmode="numeric" autocomplete="off" maxlength="40" required><p id="refillError" class="error-text" role="alert" hidden></p><p class="field-help">Uw tegoed geldt voor deze browser op dit toestel.</p><div class="button-row"><button id="refillCancel" class="button ghost" type="button">Sluiten</button><button class="button primary" type="submit">Code gebruiken</button></div></form></dialog>
   <dialog id="confirmDialog" aria-labelledby="confirmTitle"><h2 id="confirmTitle">Bewaarde gegevens verwijderen?</h2><p id="confirmText"></p><div class="button-row"><button id="confirmCancel" class="button ghost" type="button" autofocus>Annuleren</button><button id="confirmAccept" class="button primary" type="button">Verwijderen</button></div></dialog>
+  </div>
 </body></html>

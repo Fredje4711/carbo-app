@@ -641,7 +641,7 @@ h2 { font-size: 1.15rem; }
 .upload-grid { gap: 8px; }
 .button, .upload-button { min-height: 44px; padding: 8px 10px; border-radius: 10px; font-size: .9375rem; }
 .preview-wrap { margin: 8px 0 0; }
-.preview-wrap img { height: 100px; }
+.preview-wrap img { height: auto; max-height: none; }
 .preview-wrap figcaption { padding: 2px 8px; font-size: .75rem; }
 .description-block { margin-top: 10px; }
 .field-heading label { font-size: .875rem; }
@@ -659,7 +659,7 @@ summary { min-height: 40px; padding: 9px 0; font-size: .875rem; }
 .medical-warning { margin-bottom: 4px; padding: 8px 11px; border-radius: 10px; font-size: .8125rem; }
 .app-footer, .keyboard-open .app-footer { padding: 0 12px max(12px, env(safe-area-inset-bottom)); font-size: .75rem; }
 .app-footer p { margin: 0; }
-.has-result .scanner-card { display: none; }
+
 .result-heading { align-items: center; gap: 6px; }
 .result-heading h2 { flex: 1; margin-bottom: 4px; }
 .confidence { font-size: .75rem; padding: 4px 6px; margin-bottom: 4px; }
@@ -680,3 +680,13 @@ summary { min-height: 40px; padding: 9px 0; font-size: .875rem; }
 #settingsDialog .field-help { font-size: .8125rem; }
 html { scroll-padding-bottom: 12px; }
 @media(max-width:360px) { .result-card .button-row>* { flex: 1; } .result-card .button-row .button { font-size: .8125rem; } }
+
+.installation-card { padding: 20px; }
+.installation-card > img { display: block; margin: 0 auto 14px; border-radius: 16px; }
+.installation-card h2 { margin-bottom: 16px; }
+.installation-card h3 { margin: 16px 0 8px; }
+.installation-card p { margin: 12px 0; }
+.installation-card ol { padding-left: 23px; }
+.installation-card li { padding-left: 3px; margin: 12px 0; }
+#gatewayStatus:empty { display: none; }
+#result-title { scroll-margin-top: 16px; }

@@ -1,18 +1,18 @@
-# Koolhydraten Scanner 3.0.1
+# Koolhydraten Scanner 3.1.0
 
 Mobiele PWA met Vercel-functies voor een voorzichtige koolhydraatschatting en Nederlandse spraakomzetting. GitHub blijft de bron; Vercel blijft de hosting. Begin bij [START-HIER.md](START-HIER.md). Zie ook [de correctie na uw gebruikerstest](docs/CORRECTIE-COMPACT.md).
 
 ## Verbeteringen
 
 - Compacte opzet gebaseerd op het origineel, knoppen vanaf 44 px en een foto van 100 px hoog die u kunt vergroten. De analyseknop staat in het formulier.
-- Het resultaat vervangt het formulier. Extra uitleg is uitklapbaar. Geschiedenis en installatie/privacy staan onder Meer & instellingen.
+- Foto en formulier blijven boven het resultaat staan. Scroll terug voor aanvullende ingrediënten of porties en analyseer dezelfde foto opnieuw. Geschiedenis en privacy staan onder Meer & instellingen.
 - Eén actieve bewerking tegelijk, annulering en bescherming tegen late antwoorden en overlappende fotokeuzes.
 - Fotoverwerking tot 40 MB invoer, lokaal verkleinen tot 1280 px, browserondersteunde HEIC-conversie met duidelijke terugvalmelding. Preview gebruikt de verkleinde afbeelding.
 - Opnameteller tot 45 seconden, microfoon vrijgeven, annuleren en tijdslimiet voor tekstomzetting.
 - Offline-indicatie; bij fouten blijven foto en tekst staan. Resultaatcontrole op server én client; totalen uit onderdelen afgeleid. Geen herkende maaltijd verbruikt geen scan en toont geen nulgramtotaal.
 - Portie verduidelijken voert een nieuwe analyse uit met aangepaste beschrijving.
 - Optionele IndexedDB-sessieopslag, maximaal 24 uur herstelbaar; maximaal tien resultaten zonder foto/opname. Verlopen sessies worden bij een volgende start verwijderd. Opslaan staat standaard uit.
-- Installatiehulp voor iPhone/Android en ondersteunde browserinstallatieprompt; updates na expliciete actie.
+- Installatiepagina met toestelherkenning vóór toegang; op gsm opent alleen standalone de scanner. Android-installatieprompt waar beschikbaar, Safari-uitleg voor iPhone. Updates na expliciete actie.
 - Bestaande feedbackcode activeert onbeperkt gratis scans. Bestaande resterende scantellers blijven behouden. Er is geen automatische migratie van eerder uitgegeven blokken van 100 naar onbeperkt: voer de code eenmaal opnieuw in.
 
 ## Starten en testen

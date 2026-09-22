@@ -128,7 +128,7 @@ test('een offline gsm start geen analyse en kan het resultaat nog wissen', async
   let requests = 0; const { app, context, get } = harness({ fetch: async () => { requests++; } });
   app.state.image = 'data:image/jpeg;base64,dGVzdA=='; context.navigator.onLine = false;
   await app.analyze(); assert.equal(requests, 0); assert.equal(get('analyzeButton').disabled, true);
-  app.state.analysis = noMeal; app.syncUI(); assert.equal(get('analyzeButton').disabled, false); assert.equal(get('analyzeButton').textContent, 'Nieuwe maaltijd');
+  app.state.analysis = noMeal; app.syncUI(); assert.equal(get('analyzeButton').disabled, true); assert.equal(get('newMealBtn').disabled, false);
 });
 test('een timeout breekt ook de browseraanvraag af', async () => {
   let timeoutAction;
@@ -146,10 +146,19 @@ test('onbeperkt blijft deze sessie werken wanneer schrijven naar opslag faalt', 
   app.state.image = 'data:image/jpeg;base64,dGVzdA=='; await app.analyze();
   assert.equal(app.state.credits, Infinity); assert.equal(get('creditCount').textContent, 'Onbeperkt');
 });
-test('na een resultaat start de vaste hoofdknop een nieuwe maaltijd zonder herhaalscan', async () => {
-  const { app, get } = harness(); app.state.image = 'data:image/jpeg;base64,dGVzdA=='; await app.analyze();
-  assert.equal(get('analyzeButton').textContent, 'Nieuwe maaltijd');
-  await get('analyzeButton').emit('click'); assert.equal(app.state.image, null); assert.equal(app.state.credits, 49);
+test('heranalyse stuurt dezelfde foto en aanvullende tekst, en behoudt het formulier', async () => {
+  const requests = [];
+  const { app, get } = harness({ fetch: async (_url, options) => { requests.push(JSON.parse(options.body)); return { ok: true, json: async () => ({ analysis: meal }) }; } });
+  app.state.image = 'data:image/jpeg;base64,dGVzdA=='; await app.analyze();
+  assert.equal(get('analyzeButton').textContent, 'Opnieuw analyseren');
+  get('description').value = '150 g friet'; await get('description').emit('input');
+  assert.equal(get('resultSection').hidden, false);
+  assert.match(get('resultContext').textContent, /Vorige schatting/);
+  await get('analyzeButton').emit('click');
+  assert.equal(requests.length, 2); assert.equal(requests[1].image, requests[0].image);
+  assert.equal(requests[1].description, '150 g friet'); assert.ok(app.state.image);
+  assert.equal(get('description').value, '150 g friet'); assert.equal(app.state.credits, 48);
+  assert.equal(get('resultContext').hidden, true);
 });
 test('een vervallen herstelsessie wordt bij openen ook uit opslag verwijderd', async () => {
   const { app, stored, local } = harness(); stored.set('carbo_remember_meals', '1');

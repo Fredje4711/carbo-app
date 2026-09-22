@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-const files = ['script.js', 'service-worker.js', ...['api', 'lib', 'tools', 'test'].flatMap(dir => readdirSync(dir).filter(name => /\.(m?js)$/.test(name)).map(name => `${dir}/${name}`))];
+const files = ['entry.js', 'script.js', 'service-worker.js', ...['api', 'lib', 'tools', 'test'].flatMap(dir => readdirSync(dir).filter(name => /\.(m?js)$/.test(name)).map(name => `${dir}/${name}`))];
 for (const file of files) {
   const result = spawnSync(process.execPath, ['--check', file], { stdio: 'inherit' });
   if (result.status !== 0) process.exit(result.status || 1);
@@ -8,7 +8,7 @@ for (const file of files) {
 const html = readFileSync('index.html', 'utf8');
 const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
 if (new Set(ids).size !== ids.length) throw new Error('Duplicate element IDs');
-const script = readFileSync('script.js', 'utf8');
+const script = readFileSync('script.js', 'utf8') + readFileSync('entry.js', 'utf8');
 for (const [, id] of script.matchAll(/\$\('([^']+)'\)/g)) if (!ids.includes(id)) throw new Error(`Missing element: ${id}`);
 const version = JSON.parse(readFileSync('package.json')).version;
 const lock = JSON.parse(readFileSync('package-lock.json'));
