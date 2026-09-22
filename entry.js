@@ -1,4 +1,4 @@
-import { devicePlatform, scannerAllowed } from './lib/installation.js?v=22';
+import { devicePlatform, scannerAllowed } from './lib/installation.js?v=24';
 
 const $ = id => document.getElementById(id);
 const device = devicePlatform(navigator);
@@ -22,7 +22,7 @@ async function openScanner() {
   }
   launched = true;
   try {
-    await import('./script.js?v=22');
+    await import('./script.js?v=24');
     $('installationGate').hidden = true;
     $('application').hidden = false;
   } catch {

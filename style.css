@@ -702,7 +702,9 @@ html { scroll-padding-bottom: 12px; }
 #helpDialog p { margin: 12px 0 18px; }
 #helpDialog > button { width: 100%; }
 
-.meals-toolbar { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+.scanner-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.scanner-heading h2 { margin: 0; min-width: 0; }
+.scanner-heading .button { flex-shrink: 0; font-size: .8125rem; padding: 6px 9px; }
 .save-meal { width: 100%; margin-top: 8px; }
 .history-entry { display: flex; align-items: center; gap: 10px; }
 .history-photo { width: 72px; height: 60px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }

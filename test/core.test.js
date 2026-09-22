@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeAnalysis } from '../lib/analysis.js';
-import { validDraft, addHistory, createLocalData } from '../lib/local-data.js';
+import { validMealImage, addHistory, createLocalData } from '../lib/local-data.js';
 import { parseCredits, creditValue } from '../lib/credits.js';
 import { rateLimit, allowRequest } from '../lib/rate-limit.js';
 import { setRateLimitHeaders } from '../lib/server.js';
@@ -21,13 +21,9 @@ test('bestaande scantellers migreren en onbeperkt blijft onbeperkt', () => {
   assert.equal(parseCredits('onzin'), 50); assert.equal(parseCredits('-1'), 50);
   assert.equal(parseCredits(creditValue(Infinity)), Infinity);
 });
-test('herstelsessies verlopen na 24 uur en corrupte sessies worden geweigerd', () => {
-  const now = Date.now(); const draft = { version: 1, savedAt: now, image: null, description: 'pasta' };
-  assert.equal(validDraft(draft, now), true);
-  assert.equal(validDraft(draft, now + 86_400_000), false);
-  assert.equal(validDraft(draft, now - 1), false);
-  assert.equal(validDraft({ ...draft, image: 'https://example.com/private.jpg' }), false);
-  assert.equal(validDraft({ ...draft, description: 'x'.repeat(801) }), false);
+test('bewaarde foto is een begrensde lokale JPEG en geen externe URL', () => {
+ assert.equal(validMealImage('data:image/jpeg;base64,dGVzdA=='), true);
+ for (const image of [null, '', 'https://example.com/foto.jpg', 'data:image/svg+xml;base64,dGVzdA==', 'data:image/jpeg;base64,' + 'a'.repeat(3_700_000)]) assert.equal(validMealImage(image), false);
 });
 test('geschiedenis blijft beperkt tot tien unieke resultaten', () => {
   let history = [];

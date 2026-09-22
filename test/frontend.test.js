@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
 import { webcrypto } from 'node:crypto';
 import { normalizeAnalysis, formatGrams } from '../lib/analysis.js';
-import { validDraft, addHistory } from '../lib/local-data.js';
+import { validMealImage, addHistory } from '../lib/local-data.js';
 import { CREDIT_KEY, FEEDBACK_CODE, parseCredits, creditValue } from '../lib/credits.js';
 import { meal, noMeal } from './fixtures.js';
 
@@ -38,13 +38,13 @@ function harness(options = {}) {
     location: { hostname: 'localhost' }, matchMedia: () => ({ matches: false, addEventListener() {} }),
     localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) },
     createLocalData: () => ({ get: async key => local.get(key), put: async (key, value) => local.set(key, value), delete: async key => local.delete(key), clear: async () => local.clear() }),
-    normalizeAnalysis, formatGrams, validDraft, addHistory, CREDIT_KEY, FEEDBACK_CODE, parseCredits, creditValue,
+    normalizeAnalysis, formatGrams, validMealImage, addHistory, CREDIT_KEY, FEEDBACK_CODE, parseCredits, creditValue,
     setTimeout, clearTimeout, setInterval, clearInterval, AbortController, Blob, FormData, URL, crypto: webcrypto, MediaRecorder: Recorder,
     fetch: async () => ({ ok: true, json: async () => ({ analysis: structuredClone(meal) }) }),
     createImageBitmap: async () => ({ width: 100, height: 100, close() {} }),
     ...options,
   });
-  vm.runInContext(source + '\nthis.app = { state, analyze, resetApp, selectImage, toggleRecording, cancelWork, finishRecording, saveDraft, initializeStorage, clearSavedData, syncUI, refreshCredits, requestJson, setupInstallation, setWorker(worker) { waitingWorker = worker; } };', context);
+  vm.runInContext(source + '\nthis.app = { state, analyze, resetApp, selectImage, toggleRecording, cancelWork, finishRecording, initializeStorage, clearSavedData, syncUI, refreshCredits, requestJson, setupInstallation, setWorker(worker) { waitingWorker = worker; } };', context);
   context.app.state.mode = 'idle'; context.app.refreshCredits(); context.app.syncUI();
   return { app: context.app, context, get, stored, local, stream };
 }
@@ -127,7 +127,7 @@ test('bewaren slaat alleen op verzoek de foto, beschrijving en analyse op', asyn
   await get('saveMealBtn').emit('click'); assert.equal(local.get('history').length, 1);
   assert.equal(stored.get(CREDIT_KEY), '49');
   app.resetApp(); await flush(); await app.initializeStorage();
-  assert.equal(app.state.history.length, 1); assert.equal(app.state.remember, false);
+  assert.equal(app.state.history.length, 1);
   await get('historyList').children[0].emit('click');
   assert.equal(app.state.image, entry.image); assert.equal(get('description').value, entry.description);
   assert.equal(get('preview').src, entry.image); assert.equal(get('resultSection').hidden, false);
@@ -143,11 +143,11 @@ test('mislukt bewaren behoudt de maaltijd en biedt opnieuw bewaren', async () =>
   assert.equal(get('saveMealBtn').disabled, false); assert.match(get('saveMealStatus').textContent, /niet gelukt/);
 });
 
-test('uitschakelen van sessieherstel verwijdert geen bewaarde maaltijden', async () => {
-  const { app, get, local } = harness(); app.state.image = 'data:image/jpeg;base64,dGVzdA==';
-  await app.analyze(); await get('saveMealBtn').emit('click');
-  get('rememberToggle').checked = false; await get('rememberToggle').emit('change');
-  assert.equal(local.get('history').length, 1); assert.equal(app.state.history.length, 1);
+test('invoer, analyse en sluiten schrijven geen tijdelijke maaltijd', async () => {
+ const { app, get, local, context } = harness(); app.state.image = 'data:image/jpeg;base64,dGVzdA==';
+ get('description').value = '100 g friet'; await get('description').emit('input');
+ await app.analyze(); await context.window.emit('pagehide'); await flush();
+ assert.equal(local.size, 0);
 });
 
 test('een bewaarde maaltijd openen vraagt eerst bevestiging bij onbewaarde invoer', async () => {
@@ -195,18 +195,20 @@ test('heranalyse stuurt dezelfde foto en aanvullende tekst, en behoudt het formu
   assert.equal(get('description').value, '150 g friet'); assert.equal(app.state.credits, 48);
   assert.equal(get('resultContext').hidden, true);
 });
-test('een vervallen herstelsessie wordt bij openen ook uit opslag verwijderd', async () => {
-  const { app, stored, local } = harness(); stored.set('carbo_remember_meals', '1');
-  local.set('draft', { version: 1, savedAt: Date.now() - 86_400_001, image: null, description: 'oud' });
-  await app.initializeStorage(); assert.equal(app.state.pendingDraft, null); assert.equal(local.has('draft'), false);
+test('oude hersteldata verdwijnen terwijl bewaarde maaltijden behouden blijven', async () => {
+ const { app, stored, local, get } = harness(); stored.set('carbo_remember_meals', '1');
+ local.set('draft', { version: 1, savedAt: Date.now(), image: 'data:image/jpeg;base64,dGVzdA==', description: 'tijdelijk' });
+ local.set('history', [{ id: 'bewaard', source: 'live-v1', date: Date.now(), image: 'data:image/jpeg;base64,dGVzdA==', description: 'bewaren', analysis: meal }]);
+ await app.initializeStorage(); assert.equal(local.has('draft'), false); assert.equal(app.state.history.length, 1);
+ assert.equal(app.state.image, null); assert.equal(get('description').value, '');
 });
 
 test('een update wordt uitgesteld wanneer de huidige maaltijd niet kan worden opgeslagen', async () => {
   let posted = false;
   const { app, get } = harness({ createLocalData: () => ({ put: async () => { throw new Error('Full'); } }) });
   app.setupInstallation(); app.setWorker({ postMessage: () => { posted = true; } });
-  app.state.remember = true; app.state.image = 'data:image/jpeg;base64,dGVzdA==';
-  await get('updateBtn').emit('click'); assert.equal(posted, false); assert.match(get('statusMessage').textContent, /uitgesteld/);
+  app.state.image = 'data:image/jpeg;base64,dGVzdA==';
+  await get('updateBtn').emit('click'); assert.equal(posted, false); assert.match(get('statusMessage').textContent, /Bewaar eerst/);
 });
 
 test('oude lokale demoresultaten worden niet als echte scans hersteld', async () => {
@@ -214,8 +216,7 @@ test('oude lokale demoresultaten worden niet als echte scans hersteld', async ()
   local.set('history', [{ id: 'oude-demo', date: Date.now(), analysis: meal }]);
   local.set('draft', { version: 1, savedAt: Date.now(), image: 'data:image/jpeg;base64,dGVzdA==', description: '', analysis: meal });
   await app.initializeStorage();
-  assert.equal(app.state.history.length, 0); assert.equal(app.state.pendingDraft.analysis, null);
-  assert.ok(app.state.pendingDraft.image);
+  assert.equal(app.state.history.length, 0); assert.equal(app.state.image, null); assert.equal(local.has('draft'), false);
 });
 
  test('uitlegvensters bewaren de invoer en starten geen scan of opname', async () => {

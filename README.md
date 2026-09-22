@@ -1,4 +1,4 @@
-# Koolhydraten Scanner 3.3.0
+# Koolhydraten Scanner 3.3.2
 
 Mobiele PWA met Vercel-functies voor een voorzichtige koolhydraatschatting en Nederlandse spraakomzetting. GitHub blijft de bron; Vercel blijft de hosting. Begin bij [START-HIER.md](START-HIER.md). Zie ook [de correctie na uw gebruikerstest](docs/CORRECTIE-COMPACT.md).
 
@@ -11,7 +11,7 @@ Mobiele PWA met Vercel-functies voor een voorzichtige koolhydraatschatting en Ne
 - Opnameteller tot 45 seconden, microfoon vrijgeven, annuleren en tijdslimiet voor tekstomzetting.
 - Offline-indicatie; bij fouten blijven foto en tekst staan. Resultaatcontrole op server én client; totalen uit onderdelen afgeleid. Geen herkende maaltijd verbruikt geen scan en toont geen nulgramtotaal.
 - Portie verduidelijken voert een nieuwe analyse uit met aangepaste beschrijving.
-- Bewaar maaltijd slaat op verzoek maximaal tien maaltijden lokaal op met foto, beschrijving en resultaat. Los daarvan is sessieherstel optioneel en maximaal 24 uur beschikbaar. Opnamen worden niet bewaard.
+- Bewaar maaltijd slaat op verzoek maximaal tien maaltijden lokaal op met foto, beschrijving en resultaat. Er is geen automatisch herstel van onbewaarde maaltijden. Opnamen worden niet bewaard.
 - Installatiepagina met toestelherkenning vóór toegang; op gsm opent alleen standalone de scanner. Android-installatieprompt waar beschikbaar, Safari-uitleg voor iPhone. Updates na expliciete actie.
 - Bestaande feedbackcode activeert onbeperkt gratis scans. Bestaande resterende scantellers blijven behouden. Er is geen automatische migratie van eerder uitgegeven blokken van 100 naar onbeperkt: voer de code eenmaal opnieuw in.
 

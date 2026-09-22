@@ -1,15 +1,13 @@
-import { normalizeAnalysis, formatGrams } from './lib/analysis.js?v=22';
-import { createLocalData, validDraft, addHistory } from './lib/local-data.js?v=22';
-import { CREDIT_KEY, FEEDBACK_CODE, parseCredits, creditValue } from './lib/credits.js?v=22';
+import { normalizeAnalysis, formatGrams } from './lib/analysis.js?v=24';
+import { createLocalData, validMealImage, addHistory } from './lib/local-data.js?v=24';
+import { CREDIT_KEY, FEEDBACK_CODE, parseCredits, creditValue } from './lib/credits.js?v=24';
 
 const API_BASE = location.hostname.endsWith('github.io') ? 'https://carbo-app.vercel.app' : '';
 const REQUEST_TIMEOUT = 55_000;
-const REMEMBER_KEY = 'carbo_remember_meals';
 const LOCAL_PREVIEW = ['localhost', '127.0.0.1'].includes(location.hostname);
 const $ = id => document.getElementById(id);
 const localData = createLocalData();
-const state = { mode: 'starting', image: null, analysis: null, operation: 0, controller: null, recording: null, remember: false, history: [], pendingDraft: null, credits: 50, creditStorageBlocked: false, retry: false, historical: false, resultDirty: false, savedMealId: null };
-let saveTimer;
+const state = { mode: 'starting', image: null, analysis: null, operation: 0, controller: null, recording: null, history: [], credits: 50, creditStorageBlocked: false, retry: false, historical: false, resultDirty: false, savedMealId: null };
 let storageQueue = Promise.resolve();
 let storageWarningShown = false;
 let waitingWorker;
@@ -40,17 +38,17 @@ function syncUI() {
   const busy = state.mode !== 'idle';
   const speaking = ['permission', 'recording', 'transcribing'].includes(state.mode);
   const completed = Boolean(state.analysis) || state.historical || state.resultDirty;
-  $('analyzeButton').disabled = busy || !state.image || !online() || state.credits <= 0 || Boolean(state.pendingDraft);
+  $('analyzeButton').disabled = busy || !state.image || !online() || state.credits <= 0;
   $('analyzeButton').textContent = state.mode === 'analyzing' ? 'Analyseren…' : completed ? 'Opnieuw analyseren' : state.retry ? 'Opnieuw proberen' : 'Analyseer maaltijd';
   $('analyzeButton').classList.toggle('loading', state.mode === 'analyzing');
   $('cancelAnalysisBtn').hidden = state.mode !== 'analyzing';
   $('resetBtn').hidden = state.mode === 'analyzing';
   $('resetBtn').disabled = ['starting', 'saving'].includes(state.mode);
   // Selecting another photo during preparation is allowed; operation tokens discard the old decode.
-  $('cameraInput').disabled = busy && state.mode !== 'preparing' || Boolean(state.pendingDraft);
+  $('cameraInput').disabled = busy && state.mode !== 'preparing';
   $('fileInput').disabled = $('cameraInput').disabled;
-  $('description').disabled = busy || Boolean(state.pendingDraft);
-  $('recordBtn').disabled = !speechSupported() || !online() || (busy && state.mode !== 'recording') || Boolean(state.pendingDraft);
+  $('description').disabled = busy;
+  $('recordBtn').disabled = !speechSupported() || !online() || (busy && state.mode !== 'recording');
   $('recordBtn').textContent = state.mode === 'recording' ? 'Stop opname' : state.mode === 'permission' ? 'Microfoon openen…' : state.mode === 'transcribing' ? 'Tekst verwerken…' : '🎤 Spreek in';
   $('recordBtn').classList.toggle('recording', state.mode === 'recording');
   $('cancelRecordBtn').hidden = !speaking;
@@ -59,17 +57,13 @@ function syncUI() {
   $('speechHelp').hidden = speechSupported();
   $('offlineNotice').hidden = online();
   $('refillBtn').disabled = busy;
-  $('restoreBtn').disabled = state.mode === 'starting';
-  $('discardDraftBtn').disabled = state.mode === 'starting';
-  $('updateBtn').disabled = busy || Boolean(state.pendingDraft);
+  $('updateBtn').disabled = busy;
   $('correctPortionBtn').disabled = busy || !state.image || state.historical;
   $('newMealBtn').disabled = ['starting', 'saving'].includes(state.mode);
-  $('mealsBtn').disabled = busy || Boolean(state.pendingDraft);
+  $('mealsBtn').disabled = busy;
   $('saveMealBtn').disabled = busy || !state.analysis?.meal_detected || !state.image || state.resultDirty || Boolean(state.savedMealId);
   $('saveMealBtn').textContent = state.mode === 'saving' ? 'Bewaren…' : state.savedMealId ? 'Maaltijd bewaard' : 'Bewaar maaltijd';
   $('clearHistoryBtn').disabled = busy || !state.history.length;
-  $('clearDataBtn').disabled = busy;
-  $('rememberToggle').disabled = busy;
   $('charCount').textContent = `${$('description').value.length}/800`;
 }
 function setMode(mode) { state.mode = mode; syncUI(); }
@@ -101,19 +95,12 @@ function persist(task) {
   storageQueue = storageQueue.then(async () => { await task(); return true; }).catch(() => {
     if (!storageWarningShown) {
       storageWarningShown = true;
-      status('Opslaan op dit toestel is niet gelukt. De app werkt, maar deze sessie kan na sluiten verloren gaan.', 'error');
+      status('Opslaan op dit toestel is niet gelukt. Uw huidige maaltijd blijft in beeld.', 'error');
     }
     return false;
   });
   return storageQueue;
 }
-function saveDraft() {
-  clearTimeout(saveTimer);
-  if (!state.remember || state.pendingDraft) return storageQueue;
-  const draft = { version: 1, source: 'live-v1', savedAt: Date.now(), image: state.image, description: $('description').value, analysis: state.analysis };
-  return persist(() => draft.image || draft.description ? localData.put('draft', draft) : localData.delete('draft'));
-}
-function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(saveDraft, 300); }
 
 async function decodeImage(file) {
   if (typeof createImageBitmap === 'function') {
@@ -165,7 +152,7 @@ async function selectImage(event) {
     if (operation !== state.operation) return;
     state.image = image; showPreview();
     status('Foto klaar. Voeg eventueel informatie toe en analyseer uw maaltijd.', 'success');
-    saveDraft();
+
   } catch (error) {
     if (operation !== state.operation) return;
     status(`${error.message}${state.image ? ' Uw vorige foto blijft geselecteerd.' : ''}`, 'error');
@@ -194,14 +181,14 @@ async function requestJson(path, options, controller) {
 }
 async function analyze() {
   refreshCredits();
-  if (state.mode !== 'idle' || !state.image || state.pendingDraft) return;
+  if (state.mode !== 'idle' || !state.image) return;
   if (!online()) { status('Voor de analyse is internet nodig. Uw foto en tekst blijven staan.', 'error'); syncUI(); return; }
   if (state.credits <= 0) { status('Uw gratis scans zijn opgebruikt. Stuur feedback en ontvang een code voor onbeperkt gratis scans.', 'error'); syncUI(); return; }
   const operation = ++state.operation;
   const controller = new AbortController(); state.controller = controller;
   clearResult(); state.retry = false;
   setMode('analyzing'); status('Uw maaltijd wordt geanalyseerd. Dit kan tot ongeveer een minuut duren.');
-  await saveDraft();
+
   if (operation !== state.operation) return;
   try {
     const data = await requestJson('/api/proxy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: state.image, description: $('description').value.trim() }) }, controller);
@@ -213,7 +200,7 @@ async function analyze() {
 
       status('Analyse voltooid.', 'success');
     } else status('Geen duidelijke maaltijd herkend. Probeer een andere foto. Er is geen scan afgetrokken.');
-    saveDraft();
+
   } catch (error) {
     if (operation !== state.operation) return;
     state.retry = true;
@@ -278,13 +265,13 @@ function renderHistory() {
     const text = addText(button, 'span', formatGrams(entry.analysis.total.carbs_best_g) + ' g · ' + entry.analysis.items.map(item => item.name).join(', '));
     addText(text, 'small', date + (entry.image ? '' : ' · Oud resultaat zonder foto'));
     button.addEventListener('click', () => {
-      if (state.mode !== 'idle' || state.pendingDraft) return;
+      if (state.mode !== 'idle') return;
       const open = () => {
         clearResult(); state.image = entry.image || null; $('description').value = entry.description || '';
         state.analysis = entry.analysis; state.historical = !entry.image; state.savedMealId = entry.id;
         state.retry = false; showPreview(); status('');
         renderAnalysis(entry.analysis, 'Bewaarde maaltijd van ' + date + (entry.image ? '.' : '. Bij dit oude resultaat is geen foto bewaard.'));
-        saveDraft();
+
       };
       if ((state.image || $('description').value) && !state.savedMealId) {
         confirmDelete('Uw huidige maaltijd is nog niet bewaard. Wilt u toch de bewaarde maaltijd openen?', open, 'Maaltijd openen?', 'Openen');
@@ -312,7 +299,7 @@ async function toggleRecording() {
     clearInterval(state.recording.timer);
     setMode('transcribing'); state.recording.recorder.stop(); return;
   }
-  if (state.mode !== 'idle' || !online() || !speechSupported() || state.pendingDraft) return;
+  if (state.mode !== 'idle' || !online() || !speechSupported()) return;
   const operation = ++state.operation;
   const recording = { cancelled: false, stream: null, recorder: null, timer: null, chunks: [] };
   state.recording = recording;
@@ -363,19 +350,17 @@ async function finishRecording(recording, operation) {
     if (typeof data.text !== 'string' || !data.text.trim()) throw new Error('Er werd geen duidelijke spraak herkend. Probeer opnieuw.');
     const combined = [$('description').value.trim(), data.text.trim()].filter(Boolean).join(' ');
     $('description').value = combined.slice(0, 800);
-    markResultDirty(); saveDraft();
+    markResultDirty();
     status(combined.length > 800 ? 'De tekst is toegevoegd, maar ingekort tot 800 tekens. Controleer uw beschrijving.' : 'Uw tekst is toegevoegd. Controleer de porties en tik op Analyseer maaltijd.', 'success');
   } catch (error) {
     if (operation === state.operation) status(error.name === 'AbortError' ? 'Opname geannuleerd.' : error.message, 'error');
   } finally { if (operation === state.operation) { state.controller = null; setMode('idle'); } }
 }
 function resetApp() {
-  cancelWork(); clearTimeout(saveTimer);
-  state.image = null; state.pendingDraft = null; state.retry = false;
-  $('restoreNotice').hidden = true;
+  cancelWork();
+  state.image = null; state.retry = false;
   $('cameraInput').value = ''; $('fileInput').value = ''; $('description').value = '';
   clearResult(); showPreview();
-  persist(() => localData.delete('draft'));
   status(''); syncUI(); focusAndScroll('scanner-title');
 }
 function confirmDelete(text, action, title = 'Bewaarde gegevens verwijderen?', label = 'Verwijderen') {
@@ -383,17 +368,12 @@ function confirmDelete(text, action, title = 'Bewaarde gegevens verwijderen?', l
   confirmAction = action; $('confirmText').textContent = text; $('confirmDialog').showModal();
 }
 async function clearSavedData() {
-  state.remember = false; storageSet(REMEMBER_KEY, '0'); $('rememberToggle').checked = false;
-  clearTimeout(saveTimer); state.pendingDraft = null;
-  $('restoreNotice').hidden = true;
   const cleared = await persist(() => localData.clear());
   if (cleared) { state.history = []; state.savedMealId = null; }
   renderHistory(); syncUI();
   status(cleared ? 'Bewaarde maaltijden zijn verwijderd. Uw gratis scans blijven behouden.' : 'Verwijderen uit de toestelopslag is niet gelukt. Probeer opnieuw of wis de sitegegevens via uw browser.', cleared ? 'success' : 'error');
 }
 async function initializeStorage() {
-  state.remember = storageGet(REMEMBER_KEY) === '1';
-  $('rememberToggle').checked = state.remember;
   try {
     {
       const history = await localData.get('history');
@@ -401,17 +381,15 @@ async function initializeStorage() {
         if (LOCAL_PREVIEW && entry?.source !== 'live-v1') return []; // Never present old demo output as a real scan.
         try {
           if (!Number.isFinite(entry.date) || typeof entry.id !== 'string') return [];
-          const image = validDraft({ version: 1, savedAt: Date.now(), description: '', image: entry.image }) ? entry.image : null;
+          const image = validMealImage(entry.image) ? entry.image : null;
           const description = typeof entry.description === 'string' ? entry.description.slice(0, 800) : '';
           return [{ ...entry, image, description, analysis: normalizeAnalysis(entry.analysis) }];
         } catch { return []; }
       });
     }
-    if (state.remember) {
-      const draft = await localData.get('draft');
-      if (validDraft(draft)) { state.pendingDraft = { ...draft, analysis: LOCAL_PREVIEW && draft.source !== 'live-v1' ? null : draft.analysis }; $('restoreNotice').hidden = false; }
-      else await localData.delete('draft');
-    } else await localData.delete('draft');
+    // Remove legacy automatic recovery data; explicitly saved meals stay intact.
+    await localData.delete('draft');
+    try { localStorage.removeItem('carbo_remember_meals'); } catch { /* Storage may be blocked. */ }
   } catch { status('Bewaarde maaltijden konden niet worden geladen. U kunt wel een nieuwe maaltijd scannen.', 'error'); }
   setMode('idle'); renderHistory();
 }
@@ -429,13 +407,9 @@ function setupInstallation() {
     navigator.serviceWorker.addEventListener('controllerchange', () => { if (updateRequested) location.reload(); });
   }
   $('updateBtn').addEventListener('click', async () => {
-    if (state.mode !== 'idle' || !waitingWorker || state.pendingDraft) return;
-    if (!state.remember && (state.image || $('description').value)) {
-      status('Rond uw maaltijd af en kies Nieuwe maaltijd voordat u bijwerkt, of schakel sessieopslag in bij Privacy & bewaren.'); return;
-    }
-    const saved = await saveDraft();
-    if (state.remember && (state.image || $('description').value) && saved === false) {
-      status('Bijwerken is uitgesteld: uw maaltijd kon niet worden bewaard. Rond eerst uw maaltijd af en kies Nieuwe maaltijd.', 'error'); return;
+    if (state.mode !== 'idle' || !waitingWorker) return;
+    if ((state.image || $('description').value) && !state.savedMealId) {
+      status('Bewaar eerst uw maaltijd of kies Nieuwe maaltijd voordat u bijwerkt.'); return;
     }
     updateRequested = true; waitingWorker.postMessage({ type: 'SKIP_WAITING' });
   });
@@ -459,7 +433,7 @@ $('closeHelpBtn').addEventListener('click', () => $('helpDialog').close());
 
 $('cameraInput').addEventListener('change', selectImage);
 $('fileInput').addEventListener('change', selectImage);
-$('description').addEventListener('input', () => { markResultDirty(); state.retry = false; syncUI(); scheduleSave(); });
+$('description').addEventListener('input', () => { markResultDirty(); state.retry = false; syncUI();  });
 $('analyzeButton').addEventListener('click', analyze);
 $('recordBtn').addEventListener('click', toggleRecording);
 $('cancelRecordBtn').addEventListener('click', () => { cancelWork(); status('Opname geannuleerd. Er wordt geen tekst toegevoegd.'); });
@@ -486,46 +460,23 @@ $('refillForm').addEventListener('submit', event => {
   status(saved ? 'Bedankt voor uw feedback! Onbeperkt gratis scans is geactiveerd op dit toestel.' : 'Onbeperkt gratis scans is actief voor deze sessie. Uw browser blokkeert het bewaren van de code.', 'success');
 });
 $('feedbackLink').href = `mailto:fredje4711@gmail.com?subject=${encodeURIComponent('Feedback Koolhydraten Scanner')}&body=${encodeURIComponent('Hallo Freddy,\n\nMijn ervaring met de scanner:\n\nWat vond ik goed?\n\nWat kan beter?\n\nIk ontvang graag een code voor onbeperkt gratis scans.\n')}`;
-$('restoreBtn').addEventListener('click', () => {
-  const draft = state.pendingDraft;
-  if (!draft || !validDraft(draft)) { state.pendingDraft = null; $('restoreNotice').hidden = true; persist(() => localData.delete('draft')); syncUI(); return; }
-  state.image = draft.image; $('description').value = draft.description;
-  state.pendingDraft = null; $('restoreNotice').hidden = true; showPreview();
-  try { if (draft.analysis && state.image) { state.analysis = normalizeAnalysis(draft.analysis); renderAnalysis(state.analysis); } } catch { clearResult(); }
-  status('Uw vorige maaltijd is hersteld.', 'success'); syncUI();
-});
-$('discardDraftBtn').addEventListener('click', resetApp);
-$('rememberToggle').addEventListener('change', async () => {
-  if (!$('rememberToggle').checked) {
-    state.remember = false; storageSet(REMEMBER_KEY, '0'); clearTimeout(saveTimer);
-    await persist(() => localData.delete('draft')); return;
-  }
-  state.remember = true;
-  if (!storageSet(REMEMBER_KEY, '1')) { state.remember = false; $('rememberToggle').checked = false; status('Deze browser blokkeert opslag. Bewaren kan niet worden ingeschakeld.', 'error'); return; }
-  storageWarningShown = false; saveDraft(); renderHistory();
-});
-$('clearDataBtn').addEventListener('click', () => confirmDelete('Verwijder de bewaarde sessie en alle recente maaltijden op dit toestel. De scanteller blijft behouden.', clearSavedData));
-$('clearHistoryBtn').addEventListener('click', () => confirmDelete('Verwijder alle recente maaltijden op dit toestel. Uw huidige maaltijd blijft staan.', async () => { if (await persist(() => localData.delete('history'))) { state.history = []; state.savedMealId = null; } renderHistory(); }));
+$('clearHistoryBtn').addEventListener('click', () => confirmDelete('Verwijder alle bewaarde maaltijden op dit toestel. Uw huidige maaltijd en gratis scans blijven behouden.', clearSavedData));
 $('confirmCancel').addEventListener('click', () => { confirmAction = null; $('confirmDialog').close(); });
 $('confirmAccept').addEventListener('click', () => { const action = confirmAction; confirmAction = null; $('confirmDialog').close(); action?.(); });
 $('confirmDialog').addEventListener('cancel', () => { confirmAction = null; });
 window.addEventListener('storage', event => {
   if (event.key === CREDIT_KEY || event.key === null) { state.credits = parseCredits(storageGet(CREDIT_KEY)); state.creditStorageBlocked = false; refreshCredits(); syncUI(); }
-  if ((event.key === REMEMBER_KEY || event.key === null) && storageGet(REMEMBER_KEY) !== '1') {
-    state.remember = false; $('rememberToggle').checked = false; clearTimeout(saveTimer);
-    state.pendingDraft = null; $('restoreNotice').hidden = true;
-    persist(() => localData.delete('draft')); syncUI();
-  }
+
 });
 window.addEventListener('offline', () => { if (['analyzing', 'transcribing', 'permission', 'recording'].includes(state.mode)) { cancelWork(); state.retry = Boolean(state.image); status('De verbinding is weggevallen. Uw foto en tekst blijven staan.', 'error'); } syncUI(); });
 window.addEventListener('online', syncUI);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     if (['permission', 'recording'].includes(state.mode)) { cancelWork(); status('De opname is geannuleerd omdat de app naar de achtergrond ging. Spreek opnieuw in als u klaar bent.'); }
-    saveDraft();
+
   }
 });
-window.addEventListener('pagehide', () => { if (state.mode !== 'idle') cancelWork(); saveDraft(); });
+window.addEventListener('pagehide', () => { if (state.mode !== 'idle') cancelWork();  });
 function keyboardChanged() {
   const editing = ['TEXTAREA', 'INPUT'].includes(document.activeElement?.tagName);
   const viewport = window.visualViewport;

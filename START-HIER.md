@@ -1,6 +1,6 @@
 # Koolhydraten Scanner — start hier
 
-De actieve werkmap is `Koolhydraten scanner 5`. De compacte versie is 3.3.0.
+De actieve werkmap is `Koolhydraten scanner 5`. De compacte versie is 3.3.2.
 
 ## Openen met echte fotoanalyse
 
@@ -42,4 +42,4 @@ De installatie-instructies zijn nagekeken bij [Apple](https://support.apple.com/
 
 ## Maaltijden bewaren
 
-Bij een geslaagde analyse kunt u zelf Bewaar maaltijd kiezen. De 10 laatst bewaarde maaltijden bevatten de verkleinde foto, extra informatie, datum en het resultaat. De knop Maaltijden opent dit lokale overzicht. Opnieuw openen kost geen scan; heranalyse wel. Oudere resultaten zonder foto blijven herkenbaar als oud resultaat. De link Meer & instellingen is verwijderd. Automatisch sessieherstel is een afzonderlijke, optionele instelling.
+Bij een geslaagde analyse kunt u zelf Bewaar maaltijd kiezen. De 10 laatst bewaarde maaltijden bevatten de verkleinde foto, extra informatie, datum en het resultaat. De knop Maaltijden opent dit lokale overzicht. Opnieuw openen kost geen scan; heranalyse wel. Oudere resultaten zonder foto blijven herkenbaar als oud resultaat. De link Meer & instellingen is verwijderd. Tijdelijk sessieherstel is verwijderd; alleen bewust bewaarde maaltijden verschijnen in het overzicht.
