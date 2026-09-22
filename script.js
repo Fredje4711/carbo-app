@@ -1,6 +1,6 @@
-import { normalizeAnalysis, formatGrams } from './lib/analysis.js?v=20';
-import { createLocalData, validDraft, addHistory } from './lib/local-data.js?v=20';
-import { CREDIT_KEY, FEEDBACK_CODE, parseCredits, creditValue } from './lib/credits.js?v=20';
+import { normalizeAnalysis, formatGrams } from './lib/analysis.js?v=22';
+import { createLocalData, validDraft, addHistory } from './lib/local-data.js?v=22';
+import { CREDIT_KEY, FEEDBACK_CODE, parseCredits, creditValue } from './lib/credits.js?v=22';
 
 const API_BASE = location.hostname.endsWith('github.io') ? 'https://carbo-app.vercel.app' : '';
 const REQUEST_TIMEOUT = 55_000;
@@ -8,7 +8,7 @@ const REMEMBER_KEY = 'carbo_remember_meals';
 const LOCAL_PREVIEW = ['localhost', '127.0.0.1'].includes(location.hostname);
 const $ = id => document.getElementById(id);
 const localData = createLocalData();
-const state = { mode: 'starting', image: null, analysis: null, operation: 0, controller: null, recording: null, remember: false, history: [], pendingDraft: null, credits: 50, creditStorageBlocked: false, retry: false, historical: false, resultDirty: false };
+const state = { mode: 'starting', image: null, analysis: null, operation: 0, controller: null, recording: null, remember: false, history: [], pendingDraft: null, credits: 50, creditStorageBlocked: false, retry: false, historical: false, resultDirty: false, savedMealId: null };
 let saveTimer;
 let storageQueue = Promise.resolve();
 let storageWarningShown = false;
@@ -45,7 +45,7 @@ function syncUI() {
   $('analyzeButton').classList.toggle('loading', state.mode === 'analyzing');
   $('cancelAnalysisBtn').hidden = state.mode !== 'analyzing';
   $('resetBtn').hidden = state.mode === 'analyzing';
-  $('resetBtn').disabled = state.mode === 'starting';
+  $('resetBtn').disabled = ['starting', 'saving'].includes(state.mode);
   // Selecting another photo during preparation is allowed; operation tokens discard the old decode.
   $('cameraInput').disabled = busy && state.mode !== 'preparing' || Boolean(state.pendingDraft);
   $('fileInput').disabled = $('cameraInput').disabled;
@@ -63,7 +63,10 @@ function syncUI() {
   $('discardDraftBtn').disabled = state.mode === 'starting';
   $('updateBtn').disabled = busy || Boolean(state.pendingDraft);
   $('correctPortionBtn').disabled = busy || !state.image || state.historical;
-  $('newMealBtn').disabled = state.mode === 'starting';
+  $('newMealBtn').disabled = ['starting', 'saving'].includes(state.mode);
+  $('mealsBtn').disabled = busy || Boolean(state.pendingDraft);
+  $('saveMealBtn').disabled = busy || !state.analysis?.meal_detected || !state.image || state.resultDirty || Boolean(state.savedMealId);
+  $('saveMealBtn').textContent = state.mode === 'saving' ? 'Bewaren…' : state.savedMealId ? 'Maaltijd bewaard' : 'Bewaar maaltijd';
   $('clearHistoryBtn').disabled = busy || !state.history.length;
   $('clearDataBtn').disabled = busy;
   $('rememberToggle').disabled = busy;
@@ -76,12 +79,14 @@ function focusAndScroll(id) {
   node.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
 }
 function markResultDirty() {
+  state.savedMealId = null; $('saveMealStatus').hidden = true;
   if (!state.analysis && !state.resultDirty) return;
   state.analysis = null; state.resultDirty = true;
   $('resultContext').textContent = 'Vorige schatting. Uw informatie is gewijzigd; analyseer opnieuw voor een bijgewerkt resultaat.';
   $('resultContext').hidden = false;
 }
 function clearResult() {
+  state.savedMealId = null; $('saveMealStatus').hidden = true;
   state.resultDirty = false;
   state.analysis = null;
   state.historical = false;
@@ -205,11 +210,7 @@ async function analyze() {
     renderAnalysis(state.analysis);
     if (state.analysis.meal_detected) {
       useCredit();
-      if (state.remember) {
-        state.history = addHistory(state.history, { id: crypto.randomUUID(), source: 'live-v1', date: Date.now(), analysis: state.analysis });
-        const history = state.history;
-        persist(() => localData.put('history', history)); renderHistory();
-      }
+
       status('Analyse voltooid.', 'success');
     } else status('Geen duidelijke maaltijd herkend. Probeer een andere foto. Er is geen scan afgetrokken.');
     saveDraft();
@@ -254,18 +255,40 @@ function renderAnalysis(analysis, context = '') {
   $('resultSection').hidden = false;
   syncUI(); focusAndScroll('result-title');
 }
+async function saveMeal() {
+  if (state.mode !== 'idle' || !state.image || !state.analysis?.meal_detected || state.resultDirty || state.savedMealId) return;
+  const entry = { id: crypto.randomUUID(), source: 'live-v1', date: Date.now(), image: state.image, description: $('description').value, analysis: state.analysis };
+  const history = addHistory(state.history, entry);
+  setMode('saving');
+  const saved = await persist(() => localData.put('history', history));
+  if (saved) { state.history = history; state.savedMealId = entry.id; }
+  $('saveMealStatus').textContent = saved ? 'Foto en resultaat bewaard bij Maaltijden.' : 'Bewaren is niet gelukt. Probeer opnieuw of maak ruimte vrij op uw toestel.';
+  $('saveMealStatus').hidden = false;
+  setMode('idle'); renderHistory();
+}
 function renderHistory() {
-  $('historyCount').textContent = `(${state.history.length})`;
+  $('historyCount').textContent = '(' + state.history.length + ')';
   $('historyList').replaceChildren();
-  if (!state.history.length) addText($('historyList'), 'p', state.remember ? 'Nog geen bewaarde maaltijden.' : 'Schakel bewaren in bij Privacy & bewaren om recente maaltijden hier terug te vinden.', 'field-help');
+  if (!state.history.length) addText($('historyList'), 'p', 'Nog geen bewaarde maaltijden. Kies Bewaar maaltijd bij een resultaat.', 'field-help');
   for (const entry of state.history) {
     const date = new Date(entry.date).toLocaleString('nl-BE', { dateStyle: 'short', timeStyle: 'short' });
-    const button = addText($('historyList'), 'button', `${formatGrams(entry.analysis.total.carbs_best_g)} g · ${entry.analysis.items.map(item => item.name).join(', ')}`, 'history-entry');
-    button.type = 'button'; addText(button, 'small', date);
+    const button = addText($('historyList'), 'button', '', 'history-entry');
+    button.type = 'button';
+    if (entry.image) { const photo = addText(button, 'img', '', 'history-photo'); photo.src = entry.image; photo.alt = 'Maaltijdfoto'; photo.loading = 'lazy'; }
+    const text = addText(button, 'span', formatGrams(entry.analysis.total.carbs_best_g) + ' g · ' + entry.analysis.items.map(item => item.name).join(', '));
+    addText(text, 'small', date + (entry.image ? '' : ' · Oud resultaat zonder foto'));
     button.addEventListener('click', () => {
-      if (state.mode !== 'idle') return;
-      state.historical = true;
-      renderAnalysis(entry.analysis, `Bewaarde maaltijd van ${date}. De foto is niet bewaard.`);
+      if (state.mode !== 'idle' || state.pendingDraft) return;
+      const open = () => {
+        clearResult(); state.image = entry.image || null; $('description').value = entry.description || '';
+        state.analysis = entry.analysis; state.historical = !entry.image; state.savedMealId = entry.id;
+        state.retry = false; showPreview(); status('');
+        renderAnalysis(entry.analysis, 'Bewaarde maaltijd van ' + date + (entry.image ? '.' : '. Bij dit oude resultaat is geen foto bewaard.'));
+        saveDraft();
+      };
+      if ((state.image || $('description').value) && !state.savedMealId) {
+        confirmDelete('Uw huidige maaltijd is nog niet bewaard. Wilt u toch de bewaarde maaltijd openen?', open, 'Maaltijd openen?', 'Openen');
+      } else open();
     });
   }
   syncUI();
@@ -355,31 +378,41 @@ function resetApp() {
   persist(() => localData.delete('draft'));
   status(''); syncUI(); focusAndScroll('scanner-title');
 }
-function confirmDelete(text, action) {
+function confirmDelete(text, action, title = 'Bewaarde gegevens verwijderen?', label = 'Verwijderen') {
+  $('confirmTitle').textContent = title; $('confirmAccept').textContent = label;
   confirmAction = action; $('confirmText').textContent = text; $('confirmDialog').showModal();
 }
 async function clearSavedData() {
   state.remember = false; storageSet(REMEMBER_KEY, '0'); $('rememberToggle').checked = false;
-  clearTimeout(saveTimer); state.pendingDraft = null; state.history = [];
+  clearTimeout(saveTimer); state.pendingDraft = null;
   $('restoreNotice').hidden = true;
-  const cleared = await persist(() => localData.clear()); renderHistory(); syncUI();
+  const cleared = await persist(() => localData.clear());
+  if (cleared) { state.history = []; state.savedMealId = null; }
+  renderHistory(); syncUI();
   status(cleared ? 'Bewaarde maaltijden zijn verwijderd. Uw gratis scans blijven behouden.' : 'Verwijderen uit de toestelopslag is niet gelukt. Probeer opnieuw of wis de sitegegevens via uw browser.', cleared ? 'success' : 'error');
 }
 async function initializeStorage() {
   state.remember = storageGet(REMEMBER_KEY) === '1';
   $('rememberToggle').checked = state.remember;
   try {
-    if (state.remember) {
+    {
       const history = await localData.get('history');
       state.history = (Array.isArray(history) ? history : []).slice(0, 10).flatMap(entry => {
         if (LOCAL_PREVIEW && entry?.source !== 'live-v1') return []; // Never present old demo output as a real scan.
-        try { return Number.isFinite(entry.date) && typeof entry.id === 'string' ? [{ ...entry, analysis: normalizeAnalysis(entry.analysis) }] : []; } catch { return []; }
+        try {
+          if (!Number.isFinite(entry.date) || typeof entry.id !== 'string') return [];
+          const image = validDraft({ version: 1, savedAt: Date.now(), description: '', image: entry.image }) ? entry.image : null;
+          const description = typeof entry.description === 'string' ? entry.description.slice(0, 800) : '';
+          return [{ ...entry, image, description, analysis: normalizeAnalysis(entry.analysis) }];
+        } catch { return []; }
       });
+    }
+    if (state.remember) {
       const draft = await localData.get('draft');
       if (validDraft(draft)) { state.pendingDraft = { ...draft, analysis: LOCAL_PREVIEW && draft.source !== 'live-v1' ? null : draft.analysis }; $('restoreNotice').hidden = false; }
       else await localData.delete('draft');
-    } else await localData.clear();
-  } catch { if (state.remember) status('Bewaarde gegevens zijn niet beschikbaar. U kunt een nieuwe maaltijd scannen.', 'error'); }
+    } else await localData.delete('draft');
+  } catch { status('Bewaarde maaltijden konden niet worden geladen. U kunt wel een nieuwe maaltijd scannen.', 'error'); }
   setMode('idle'); renderHistory();
 }
 function setupInstallation() {
@@ -438,7 +471,8 @@ $('correctPortionBtn').addEventListener('click', () => {
   status('');
   focusAndScroll('description');
 });
-$('settingsBtn').addEventListener('click', () => $('settingsDialog').showModal());
+$('mealsBtn').addEventListener('click', () => { $('historyPanel').open = true; $('settingsDialog').showModal(); });
+$('saveMealBtn').addEventListener('click', saveMeal);
 $('closeSettingsBtn').addEventListener('click', () => $('settingsDialog').close());
 $('refillBtn').addEventListener('click', () => { $('refillCode').value = ''; $('refillError').hidden = true; $('refillDialog').showModal(); });
 $('refillCancel').addEventListener('click', () => $('refillDialog').close());
@@ -462,13 +496,16 @@ $('restoreBtn').addEventListener('click', () => {
 });
 $('discardDraftBtn').addEventListener('click', resetApp);
 $('rememberToggle').addEventListener('change', async () => {
-  if (!$('rememberToggle').checked) { await clearSavedData(); return; }
+  if (!$('rememberToggle').checked) {
+    state.remember = false; storageSet(REMEMBER_KEY, '0'); clearTimeout(saveTimer);
+    await persist(() => localData.delete('draft')); return;
+  }
   state.remember = true;
   if (!storageSet(REMEMBER_KEY, '1')) { state.remember = false; $('rememberToggle').checked = false; status('Deze browser blokkeert opslag. Bewaren kan niet worden ingeschakeld.', 'error'); return; }
   storageWarningShown = false; saveDraft(); renderHistory();
 });
 $('clearDataBtn').addEventListener('click', () => confirmDelete('Verwijder de bewaarde sessie en alle recente maaltijden op dit toestel. De scanteller blijft behouden.', clearSavedData));
-$('clearHistoryBtn').addEventListener('click', () => confirmDelete('Verwijder alle recente maaltijden op dit toestel. Uw huidige maaltijd blijft staan.', async () => { state.history = []; await persist(() => localData.delete('history')); renderHistory(); }));
+$('clearHistoryBtn').addEventListener('click', () => confirmDelete('Verwijder alle recente maaltijden op dit toestel. Uw huidige maaltijd blijft staan.', async () => { if (await persist(() => localData.delete('history'))) { state.history = []; state.savedMealId = null; } renderHistory(); }));
 $('confirmCancel').addEventListener('click', () => { confirmAction = null; $('confirmDialog').close(); });
 $('confirmAccept').addEventListener('click', () => { const action = confirmAction; confirmAction = null; $('confirmDialog').close(); action?.(); });
 $('confirmDialog').addEventListener('cancel', () => { confirmAction = null; });
@@ -476,8 +513,8 @@ window.addEventListener('storage', event => {
   if (event.key === CREDIT_KEY || event.key === null) { state.credits = parseCredits(storageGet(CREDIT_KEY)); state.creditStorageBlocked = false; refreshCredits(); syncUI(); }
   if ((event.key === REMEMBER_KEY || event.key === null) && storageGet(REMEMBER_KEY) !== '1') {
     state.remember = false; $('rememberToggle').checked = false; clearTimeout(saveTimer);
-    state.history = []; state.pendingDraft = null; $('restoreNotice').hidden = true;
-    persist(() => localData.clear()); renderHistory();
+    state.pendingDraft = null; $('restoreNotice').hidden = true;
+    persist(() => localData.delete('draft')); syncUI();
   }
 });
 window.addEventListener('offline', () => { if (['analyzing', 'transcribing', 'permission', 'recording'].includes(state.mode)) { cancelWork(); state.retry = Boolean(state.image); status('De verbinding is weggevallen. Uw foto en tekst blijven staan.', 'error'); } syncUI(); });

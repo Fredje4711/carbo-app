@@ -11,8 +11,8 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="stylesheet" href="style.css?v=20">
-  <script type="module" src="entry.js?v=20"></script>
+  <link rel="stylesheet" href="style.css?v=22">
+  <script type="module" src="entry.js?v=22"></script>
 </head>
 <body>
   <header class="app-header"><div class="header-inner">
@@ -39,6 +39,7 @@
     <div id="offlineNotice" class="notice" role="status" hidden>U bent offline. U kunt een foto voorbereiden en bewaarde resultaten bekijken. Voor analyse en spraak is internet nodig.</div>
     <div id="updateNotice" class="notice" hidden><p>Een nieuwe versie is klaar. Rond eerst uw maaltijd af.</p><button id="updateBtn" class="button secondary" type="button">Nieuwe versie openen</button></div>
     <div id="restoreNotice" class="notice" hidden><p>Er staat nog een maaltijd van uw vorige sessie op dit toestel.</p><div class="button-row"><button id="restoreBtn" class="button secondary" type="button">Maaltijd herstellen</button><button id="discardDraftBtn" class="button ghost" type="button">Verwijderen</button></div></div>
+    <div class="meals-toolbar"><button id="mealsBtn" class="button secondary" type="button">▣ Maaltijden</button></div>
     <section class="scanner-card" aria-labelledby="scanner-title">
       <div class="intro"><h2 id="scanner-title" tabindex="-1">Wat ligt er op uw bord?</h2><p>Maak of kies een foto van uw maaltijd.</p></div>
       <div class="upload-grid">
@@ -66,18 +67,19 @@
       <details id="explanationDetails" class="help-panel"><summary>Toelichting & onzekerheden</summary><p id="summaryText"></p><div id="explanationList"></div>
       <details id="assumptionsSection" class="note-panel" hidden><summary>Aannames en onzekerheden</summary><ul id="assumptionsList"></ul></details>
       <p class="field-help">Zekerheid is een inschatting van het model.</p></details>
+      <button id="saveMealBtn" class="button secondary save-meal" type="button">Bewaar maaltijd</button><p id="saveMealStatus" class="field-help" role="status" hidden></p>
       <div class="button-row"><div class="control-with-help"><button id="correctPortionBtn" class="button secondary" type="button">Portie verduidelijken</button><button id="portionHelpBtn" class="info-button" type="button" aria-label="Uitleg bij Portie verduidelijken" aria-haspopup="dialog" aria-controls="helpDialog"><span aria-hidden="true">ⓘ</span></button></div><button id="newMealBtn" class="button primary" type="button">Nieuwe maaltijd</button></div>
     </section>
     <aside class="medical-warning"><p><strong>Dit blijft een schatting.</strong> Niet als enige basis voor een insulinedosis.</p></aside>
 
   </main>
-  <footer class="app-footer"><button id="settingsBtn" type="button" class="text-button">Meer & instellingen</button><p>© Freddy Sleeuwaert · <span id="appVersion">3.2.0</span></p></footer>
+  <footer class="app-footer"><p>© Freddy Sleeuwaert · <span id="appVersion">3.3.0</span></p></footer>
 
   <dialog id="helpDialog" aria-labelledby="helpTitle" aria-describedby="helpText"><h2 id="helpTitle"></h2><p id="helpText"></p><button id="closeHelpBtn" class="button primary" type="button" autofocus>Begrepen</button></dialog>
-  <dialog id="settingsDialog" aria-labelledby="settingsTitle"><div class="settings-heading"><h2 id="settingsTitle">Meer & instellingen</h2><button id="closeSettingsBtn" type="button" class="button ghost">Sluiten</button></div>    <details id="historyPanel" class="utility-panel"><summary>Recente maaltijden <span id="historyCount">(0)</span></summary><p class="field-help">Maximaal 10 resultaten op dit toestel, zonder foto of opname.</p><div id="historyList"></div><button id="clearHistoryBtn" class="button ghost" type="button" disabled>Geschiedenis wissen</button></details>
+  <dialog id="settingsDialog" aria-labelledby="settingsTitle"><div class="settings-heading"><h2 id="settingsTitle">Bewaarde maaltijden</h2><button id="closeSettingsBtn" type="button" class="button ghost">Sluiten</button></div>    <details id="historyPanel" class="utility-panel" open><summary>Maaltijden <span id="historyCount">(0)</span></summary><p class="field-help">Uw 10 laatst bewaarde maaltijden, met foto, extra informatie en resultaat. Alleen op dit toestel.</p><div id="historyList"></div><button id="clearHistoryBtn" class="button ghost" type="button" disabled>Bewaarde maaltijden wissen</button></details>
     <details class="utility-panel"><summary>Privacy &amp; bewaren</summary>
-      <label class="setting"><input id="rememberToggle" type="checkbox"> Bewaar mijn sessie en recente resultaten op dit toestel</label>
-      <p class="field-help">Optioneel. De huidige foto en beschrijving blijven maximaal 24 uur beschikbaar voor herstel. Recente resultaten blijven staan tot u ze wist. Deze gegevens worden niet tussen toestellen gesynchroniseerd. U kunt alles hieronder verwijderen.</p>
+      <label class="setting"><input id="rememberToggle" type="checkbox"> Herstel mijn huidige maaltijd bij opnieuw openen</label>
+      <p class="field-help">Optioneel: bewaar de huidige maaltijd maximaal 24 uur voor herstel. Gebruik Bewaar maaltijd bij het resultaat om een maaltijd in uw overzicht te zetten. De gegevens worden niet tussen toestellen gesynchroniseerd.</p>
       <button id="clearDataBtn" class="button ghost" type="button">Bewaarde maaltijden verwijderen</button>
       <p class="field-help">Voor analyse worden uw foto en beschrijving via onze server naar OpenAI gestuurd. Bij inspreken wordt ook uw opname doorgestuurd. De app bewaart deze niet in een eigen serverdatabank. De verwerking door OpenAI volgt diens gegevensbeleid.</p>
     </details></dialog>

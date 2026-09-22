@@ -701,3 +701,9 @@ html { scroll-padding-bottom: 12px; }
 .field-heading output { margin-left: auto; }
 #helpDialog p { margin: 12px 0 18px; }
 #helpDialog > button { width: 100%; }
+
+.meals-toolbar { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+.save-meal { width: 100%; margin-top: 8px; }
+.history-entry { display: flex; align-items: center; gap: 10px; }
+.history-photo { width: 72px; height: 60px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+.history-entry > span { min-width: 0; overflow-wrap: anywhere; }

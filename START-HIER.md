@@ -1,6 +1,6 @@
 # Koolhydraten Scanner — start hier
 
-De actieve werkmap is `Koolhydraten scanner 5`. De compacte versie is 3.2.0.
+De actieve werkmap is `Koolhydraten scanner 5`. De compacte versie is 3.3.0.
 
 ## Openen met echte fotoanalyse
 
@@ -18,7 +18,7 @@ De eerdere demo met vaste pastaresultaten is verwijderd. `--demo` wordt geweiger
 - De foto vult de breedte zonder uitsnijden. Het resultaat staat onder hetzelfde formulier; na analyse scrolt de app ernaartoe.
 - Pas tekst of ingesproken porties aan en kies Opnieuw analyseren. Dezelfde foto blijft geselecteerd.
 - Voedingsmiddelen en grammen staan kort onder elkaar. Toelichting is uitklapbaar.
-- Geschiedenis en privacy staan onder Meer & instellingen. Installatie-uitleg staat uitsluitend vóór toegang tot de app.
+- De knop Maaltijden opent uw bewaarde maaltijden en de opties voor lokale opslag. Installatie-uitleg staat uitsluitend vóór toegang tot de app.
 - De bestaande feedbackcode geeft onbeperkt gratis scans.
 
 ## Controleren en publiceren
@@ -39,3 +39,7 @@ De gewone link (lokaal http://127.0.0.1:4174/) toont de installatiepagina. Op co
 De tijdelijke testtoegang ?test=1 werkt uitsluitend op localhost/127.0.0.1 en wordt niet aangeboden aan gewone gebruikers. Verwijderen kan door LOCAL_TEST_ENABLED in lib/installation.js op false te zetten, met een nieuwe asset- en serviceworkerversie. Dit is een gebruiksstroom, geen authenticatie of serverbeveiliging.
 
 De installatie-instructies zijn nagekeken bij [Apple](https://support.apple.com/guide/iphone/iphea86e5236/ios) en [Google](https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&hl=nl). De definitieve installatie, het pictogram en openen vanuit het beginscherm moeten nog op een echte iPhone en Android worden gecontroleerd via een HTTPS-preview. De lokale laptoptest gebruikt echte Vercel-analyse, maar biedt geen gsm-installatietest.
+
+## Maaltijden bewaren
+
+Bij een geslaagde analyse kunt u zelf Bewaar maaltijd kiezen. De 10 laatst bewaarde maaltijden bevatten de verkleinde foto, extra informatie, datum en het resultaat. De knop Maaltijden opent dit lokale overzicht. Opnieuw openen kost geen scan; heranalyse wel. Oudere resultaten zonder foto blijven herkenbaar als oud resultaat. De link Meer & instellingen is verwijderd. Automatisch sessieherstel is een afzonderlijke, optionele instelling.

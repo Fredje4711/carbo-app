@@ -116,12 +116,47 @@ test('feedbackcode geeft blijvend onbeperkt en succesvolle scans verminderen dat
   app.state.image = 'data:image/jpeg;base64,dGVzdA=='; await app.analyze();
   assert.equal(app.state.credits, Infinity); assert.equal(get('creditCount').textContent, 'Onbeperkt');
 });
-test('alleen met toestemming worden sessie en fotoloze geschiedenis opgeslagen', async () => {
-  const { app, local, stored } = harness(); app.state.image = 'data:image/jpeg;base64,dGVzdA==';
+test('bewaren slaat alleen op verzoek de foto, beschrijving en analyse op', async () => {
+  const { app, local, stored, get } = harness(); app.state.image = 'data:image/jpeg;base64,dGVzdA==';
+  get('description').value = '100 g friet';
   await app.analyze(); await flush(); assert.equal(local.size, 0);
-  app.state.remember = true; stored.set('carbo_remember_meals', '1'); await app.analyze(); await flush();
-  assert.equal(local.get('history').length, 1); assert.equal('image' in local.get('history')[0], false); assert.equal(local.get('draft').image, app.state.image);
-  await app.clearSavedData(); assert.equal(local.size, 0); assert.equal(app.state.history.length, 0); assert.equal(stored.get(CREDIT_KEY), '48');
+  await get('saveMealBtn').emit('click');
+  const entry = local.get('history')[0];
+  assert.equal(entry.image, app.state.image); assert.equal(entry.description, '100 g friet');
+  assert.equal(entry.analysis.total.carbs_best_g, app.state.analysis.total.carbs_best_g);
+  await get('saveMealBtn').emit('click'); assert.equal(local.get('history').length, 1);
+  assert.equal(stored.get(CREDIT_KEY), '49');
+  app.resetApp(); await flush(); await app.initializeStorage();
+  assert.equal(app.state.history.length, 1); assert.equal(app.state.remember, false);
+  await get('historyList').children[0].emit('click');
+  assert.equal(app.state.image, entry.image); assert.equal(get('description').value, entry.description);
+  assert.equal(get('preview').src, entry.image); assert.equal(get('resultSection').hidden, false);
+  assert.equal(stored.get(CREDIT_KEY), '49');
+  await app.clearSavedData(); assert.equal(local.size, 0); assert.equal(app.state.history.length, 0);
+});
+
+test('mislukt bewaren behoudt de maaltijd en biedt opnieuw bewaren', async () => {
+  const { app, get } = harness({ createLocalData: () => ({ put: async () => { throw new Error('Vol'); } }) });
+  app.state.image = 'data:image/jpeg;base64,dGVzdA=='; await app.analyze();
+  await get('saveMealBtn').emit('click');
+  assert.ok(app.state.image); assert.ok(app.state.analysis); assert.equal(app.state.history.length, 0);
+  assert.equal(get('saveMealBtn').disabled, false); assert.match(get('saveMealStatus').textContent, /niet gelukt/);
+});
+
+test('uitschakelen van sessieherstel verwijdert geen bewaarde maaltijden', async () => {
+  const { app, get, local } = harness(); app.state.image = 'data:image/jpeg;base64,dGVzdA==';
+  await app.analyze(); await get('saveMealBtn').emit('click');
+  get('rememberToggle').checked = false; await get('rememberToggle').emit('change');
+  assert.equal(local.get('history').length, 1); assert.equal(app.state.history.length, 1);
+});
+
+test('een bewaarde maaltijd openen vraagt eerst bevestiging bij onbewaarde invoer', async () => {
+  const { app, get } = harness(); app.state.image = 'data:image/jpeg;base64,dGVzdA==';
+  await app.analyze(); await get('saveMealBtn').emit('click');
+  get('description').value = 'nieuwe portie'; await get('description').emit('input');
+  await get('historyList').children[0].emit('click');
+  assert.equal(get('confirmDialog').open, true); assert.equal(get('confirmAccept').textContent, 'Openen');
+  await get('confirmCancel').emit('click'); assert.equal(get('description').value, 'nieuwe portie');
 });
 
 test('een offline gsm start geen analyse en kan het resultaat nog wissen', async () => {
