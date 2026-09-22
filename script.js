@@ -1,495 +1,487 @@
-const API_BASE = location.hostname.endsWith("github.io") ? "https://carbo-app.vercel.app" : "";
-const MAX_FILE_BYTES = 12 * 1024 * 1024;
-const MAX_RECORDING_MS = 45_000;
-const REQUEST_TIMEOUT_MS = 55_000;
-const SUPPORTED_IMAGES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const CREDIT_STORAGE_KEY = "carbo_credits";
-const INITIAL_CREDITS = 50;
-const REFILL_CREDITS = 100;
-const LOW_CREDIT_LEVEL = 10;
-const REFILL_CODE = "1955";
+import { normalizeAnalysis, formatGrams } from './lib/analysis.js?v=25';
+import { createLocalData, validMealImage, addHistory } from './lib/local-data.js?v=25';
+import { CREDIT_KEY, FEEDBACK_CODE, parseCredits, creditValue } from './lib/credits.js?v=25';
 
-const elements = {
-  cameraInput: document.getElementById("cameraInput"),
-  fileInput: document.getElementById("fileInput"),
-  preview: document.getElementById("preview"),
-  previewWrap: document.getElementById("previewWrap"),
-  description: document.getElementById("description"),
-  charCount: document.getElementById("charCount"),
-  recordBtn: document.getElementById("recordBtn"),
-  resetBtn: document.getElementById("resetBtn"),
-  analyzeButton: document.getElementById("analyzeButton"),
-  creditPanel: document.getElementById("creditPanel"),
-  creditBox: document.getElementById("creditBox"),
-  creditCount: document.getElementById("creditCount"),
-  creditInfo: document.getElementById("creditInfo"),
-  feedbackLink: document.getElementById("feedbackLink"),
-  refillDialog: document.getElementById("refillDialog"),
-  refillForm: document.getElementById("refillForm"),
-  refillCode: document.getElementById("refillCode"),
-  refillError: document.getElementById("refillError"),
-  refillCancel: document.getElementById("refillCancel"),
-  status: document.getElementById("statusMessage"),
-  resultSection: document.getElementById("resultSection"),
-  totalBest: document.getElementById("totalBest"),
-  totalRange: document.getElementById("totalRange"),
-  totalConfidence: document.getElementById("totalConfidence"),
-  summary: document.getElementById("summaryText"),
-  items: document.getElementById("itemsList"),
-  assumptionsSection: document.getElementById("assumptionsSection"),
-  assumptions: document.getElementById("assumptionsList"),
-};
+const API_BASE = location.hostname.endsWith('github.io') ? 'https://carbo-app.vercel.app' : '';
+const REQUEST_TIMEOUT = 55_000;
+const LOCAL_PREVIEW = ['localhost', '127.0.0.1'].includes(location.hostname);
+const $ = id => document.getElementById(id);
+const localData = createLocalData();
+const state = { mode: 'starting', image: null, analysis: null, operation: 0, controller: null, recording: null, history: [], credits: 50, creditStorageBlocked: false, retry: false, historical: false, resultDirty: false, savedMealId: null };
+let storageQueue = Promise.resolve();
+let storageWarningShown = false;
+let waitingWorker;
+let updateRequested = false;
+let confirmAction;
 
-let currentImageData = null;
-let previewUrl = null;
-let analysisController = null;
-let mediaRecorder = null;
-let mediaStream = null;
-let recordingTimer = null;
-let audioChunks = [];
-let memoryCredits = INITIAL_CREDITS;
-let creditTapCount = 0;
-let creditTapTimer = null;
-
-function readCredits() {
-  try {
-    const stored = localStorage.getItem(CREDIT_STORAGE_KEY);
-    if (stored === null) {
-      localStorage.setItem(CREDIT_STORAGE_KEY, String(INITIAL_CREDITS));
-      return INITIAL_CREDITS;
-    }
-    const parsed = Number.parseInt(stored, 10);
-    return Number.isFinite(parsed) && parsed >= 0 ? parsed : INITIAL_CREDITS;
-  } catch {
-    return memoryCredits;
-  }
+function storageGet(key) { try { return localStorage.getItem(key); } catch { return null; } }
+function storageSet(key, value) { try { localStorage.setItem(key, value); return true; } catch { return false; } }
+function refreshCredits() {
+  const stored = storageGet(CREDIT_KEY);
+  if (stored !== null && !state.creditStorageBlocked) state.credits = parseCredits(stored);
+  $('creditCount').textContent = state.credits === Infinity ? 'Onbeperkt' : String(state.credits);
 }
-
-function writeCredits(value) {
-  const safeValue = Math.max(0, Math.trunc(value));
-  memoryCredits = safeValue;
-  try {
-    localStorage.setItem(CREDIT_STORAGE_KEY, String(safeValue));
-  } catch {
-    // De teller blijft voor deze sessie werken als opslag geblokkeerd is.
-  }
-}
-
-function feedbackMailUrl() {
-  const subject = "Feedback Koolhydraten Scanner";
-  const body = [
-    "Hallo Freddy,",
-    "",
-    "Ik heb de Koolhydraten Scanner regelmatig gebruikt.",
-    "",
-    "Mijn ervaring:",
-    "",
-    "Wat vond ik goed?",
-    "",
-    "Wat kan volgens mij beter?",
-    "",
-    "Ik ontvang graag toegang tot onbeperkt gratis gebruik.",
-  ].join("\n");
-  return `mailto:fredje4711@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-}
-
-function updateCreditDisplay() {
-  const credits = readCredits();
-  elements.creditCount.textContent = String(credits);
-  elements.creditPanel.dataset.level = credits === 0 ? "empty" : credits <= LOW_CREDIT_LEVEL ? "low" : "normal";
-  elements.creditInfo.hidden = credits > LOW_CREDIT_LEVEL;
-  elements.feedbackLink.hidden = credits > LOW_CREDIT_LEVEL;
-  elements.feedbackLink.href = feedbackMailUrl();
-
-  if (credits === 0) {
-    elements.creditInfo.textContent = "Uw gratis scans zijn opgebruikt. Stuur uw ervaring en ontvang per mail toegang tot onbeperkt gratis gebruik.";
-  } else if (credits <= LOW_CREDIT_LEVEL) {
-    elements.creditInfo.textContent = `Nog ${credits} gratis ${credits === 1 ? "scan" : "scans"}. Stuur kort uw ervaring en ontvang per mail toegang tot onbeperkt gratis gebruik.`;
-  } else {
-    elements.creditInfo.textContent = "";
-  }
-  return credits;
-}
-
 function useCredit() {
-  const credits = readCredits();
-  if (credits <= 0) return false;
-  writeCredits(credits - 1);
-  updateCreditDisplay();
-  return true;
+  refreshCredits();
+  if (state.credits !== Infinity) state.credits = Math.max(0, state.credits - 1);
+  state.creditStorageBlocked = !storageSet(CREDIT_KEY, creditValue(state.credits));
+  refreshCredits();
 }
-
-function handleCreditTap() {
-  creditTapCount += 1;
-  clearTimeout(creditTapTimer);
-  creditTapTimer = setTimeout(() => { creditTapCount = 0; }, 3000);
-  if (creditTapCount < 3) return;
-
-  creditTapCount = 0;
-  clearTimeout(creditTapTimer);
-  elements.refillCode.value = "";
-  elements.refillError.hidden = true;
-  elements.refillDialog.showModal();
-  elements.refillCode.focus();
+function status(message, type = 'info') {
+  $('statusMessage').textContent = message;
+  $('statusMessage').dataset.type = type;
+  $('statusMessage').hidden = !message;
 }
-
-function refillCredits() {
-  writeCredits(REFILL_CREDITS);
-  updateCreditDisplay();
-  setAnalyzing(false);
-  setStatus("Uw tegoed is herladen naar 100 gratis scans.", "success");
+function online() { return navigator.onLine !== false; }
+function speechSupported() { return Boolean(navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== 'undefined'); }
+function syncUI() {
+  const busy = state.mode !== 'idle';
+  const speaking = ['permission', 'recording', 'transcribing'].includes(state.mode);
+  const completed = Boolean(state.analysis) || state.historical || state.resultDirty;
+  $('analyzeButton').disabled = busy || !state.image || !online() || state.credits <= 0;
+  $('analyzeButton').textContent = state.mode === 'analyzing' ? 'Analyseren…' : completed ? 'Opnieuw analyseren' : state.retry ? 'Opnieuw proberen' : 'Analyseer maaltijd';
+  $('analyzeButton').classList.toggle('loading', state.mode === 'analyzing');
+  $('cancelAnalysisBtn').hidden = state.mode !== 'analyzing';
+  $('resetBtn').hidden = state.mode === 'analyzing';
+  $('resetBtn').disabled = ['starting', 'saving'].includes(state.mode);
+  // Selecting another photo during preparation is allowed; operation tokens discard the old decode.
+  $('cameraInput').disabled = busy && state.mode !== 'preparing';
+  $('fileInput').disabled = $('cameraInput').disabled;
+  $('description').disabled = busy;
+  $('recordBtn').disabled = !speechSupported() || !online() || (busy && state.mode !== 'recording');
+  $('recordBtn').textContent = state.mode === 'recording' ? 'Stop opname' : state.mode === 'permission' ? 'Microfoon openen…' : state.mode === 'transcribing' ? 'Tekst verwerken…' : '🎤 Spreek in';
+  $('recordBtn').classList.toggle('recording', state.mode === 'recording');
+  $('cancelRecordBtn').hidden = !speaking;
+  $('recordTimer').hidden = state.mode !== 'recording';
+  $('speechHelp').textContent = speechSupported() ? 'Tik om op te nemen. Tik opnieuw om te stoppen.' : 'Deze browser ondersteunt geen spraakopname. U kunt de beschrijving typen.';
+  $('speechHelp').hidden = speechSupported();
+  $('offlineNotice').hidden = online();
+  $('refillBtn').disabled = busy;
+  $('updateBtn').disabled = busy;
+  $('correctPortionBtn').disabled = busy || !state.image || state.historical;
+  $('newMealBtn').disabled = ['starting', 'saving'].includes(state.mode);
+  $('mealsBtn').disabled = busy;
+  $('saveMealBtn').disabled = busy || !state.analysis?.meal_detected || !state.image || state.resultDirty || Boolean(state.savedMealId);
+  $('saveMealBtn').textContent = state.mode === 'saving' ? 'Bewaren…' : state.savedMealId ? 'Maaltijd bewaard' : 'Bewaar maaltijd';
+  $('clearHistoryBtn').disabled = busy || !state.history.length;
+  $('charCount').textContent = `${$('description').value.length}/800`;
 }
-
-function handleRefillSubmit(event) {
-  event.preventDefault();
-  if (elements.refillCode.value !== REFILL_CODE) {
-    elements.refillError.hidden = false;
-    elements.refillCode.select();
-    return;
-  }
-  elements.refillDialog.close();
-  refillCredits();
+function setMode(mode) { state.mode = mode; syncUI(); }
+function focusAndScroll(id) {
+  const node = $(id);
+  node.focus({ preventScroll: true });
+  node.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
 }
-
-function setStatus(message, type = "info") {
-  elements.status.textContent = message;
-  elements.status.dataset.type = type;
-  elements.status.hidden = !message;
+function markResultDirty() {
+  state.savedMealId = null; $('saveMealStatus').hidden = true;
+  if (!state.analysis && !state.resultDirty) return;
+  state.analysis = null; state.resultDirty = true;
+  $('resultContext').textContent = 'Vorige schatting. Uw informatie is gewijzigd; analyseer opnieuw voor een bijgewerkt resultaat.';
+  $('resultContext').hidden = false;
 }
-
-function setAnalyzing(active) {
-  elements.analyzeButton.disabled = active || !currentImageData || readCredits() <= 0;
-  elements.analyzeButton.classList.toggle("loading", active);
-  elements.analyzeButton.textContent = active ? "Analyseren…" : "Analyseer";
-  elements.cameraInput.disabled = active;
-  elements.fileInput.disabled = active;
-  elements.resetBtn.disabled = active;
+function clearResult() {
+  state.savedMealId = null; $('saveMealStatus').hidden = true;
+  state.resultDirty = false;
+  state.analysis = null;
+  state.historical = false;
+  $('resultSection').hidden = true;
 }
-
-function setPreview(file) {
-  if (previewUrl) URL.revokeObjectURL(previewUrl);
-  previewUrl = URL.createObjectURL(file);
-  elements.preview.src = previewUrl;
-  elements.previewWrap.hidden = false;
+function showPreview() {
+  $('previewWrap').hidden = !state.image;
+  if (state.image) $('preview').src = state.image;
+  else $('preview').removeAttribute('src');
 }
-
-function canvasToDataUrl(canvas) {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (!blob) return reject(new Error("De afbeelding kon niet worden verkleind."));
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = () => reject(new Error("De afbeelding kon niet worden gelezen."));
-      reader.readAsDataURL(blob);
-    }, "image/jpeg", 0.84);
+function persist(task) {
+  storageQueue = storageQueue.then(async () => { await task(); return true; }).catch(() => {
+    if (!storageWarningShown) {
+      storageWarningShown = true;
+      status('Opslaan op dit toestel is niet gelukt. Uw huidige maaltijd blijft in beeld.', 'error');
+    }
+    return false;
   });
-}
-
-async function resizeImage(file, maxDimension = 1280) {
-  const decoded = await decodeImage(file);
-  try {
-    const scale = Math.min(maxDimension / decoded.width, maxDimension / decoded.height, 1);
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(decoded.width * scale));
-    canvas.height = Math.max(1, Math.round(decoded.height * scale));
-    const context = canvas.getContext("2d", { alpha: false });
-    context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(decoded.source, 0, 0, canvas.width, canvas.height);
-    return await canvasToDataUrl(canvas);
-  } finally {
-    decoded.close();
-  }
+  return storageQueue;
 }
 
 async function decodeImage(file) {
-  if (typeof createImageBitmap === "function") {
-    let bitmap;
+  if (typeof createImageBitmap === 'function') {
     try {
-      bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
-    } catch {
-      bitmap = await createImageBitmap(file);
-    }
-    return { source: bitmap, width: bitmap.width, height: bitmap.height, close: () => bitmap.close() };
+      const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+      return { source: bitmap, width: bitmap.width, height: bitmap.height, close: () => bitmap.close() };
+    } catch { /* Safari can support an image through <img> even when bitmap decoding fails. */ }
   }
-
   const url = URL.createObjectURL(file);
-  const image = new Image();
+  const img = new Image();
   try {
-    await new Promise((resolve, reject) => {
-      image.onload = resolve;
-      image.onerror = () => reject(new Error("Deze foto kan niet door de browser worden gelezen."));
-      image.src = url;
-    });
-    return {
-      source: image,
-      width: image.naturalWidth,
-      height: image.naturalHeight,
-      close: () => URL.revokeObjectURL(url),
-    };
-  } catch (error) {
-    URL.revokeObjectURL(url);
-    throw error;
-  }
-}
-
-async function handleImageSelection(event) {
-  const file = event.target.files?.[0];
-  if (!file) return;
-
-  if (!SUPPORTED_IMAGES.has(file.type)) {
-    event.target.value = "";
-    setStatus("Kies een JPEG-, PNG- of WebP-afbeelding.", "error");
-    return;
-  }
-  if (file.size > MAX_FILE_BYTES) {
-    event.target.value = "";
-    setStatus("Deze foto is groter dan 12 MB. Kies een kleinere foto.", "error");
-    return;
-  }
-
-  elements.analyzeButton.disabled = true;
-  setStatus("Foto wordt klaargemaakt…");
-  try {
-    currentImageData = await resizeImage(file);
-    setPreview(file);
-    elements.resultSection.hidden = true;
-    elements.analyzeButton.disabled = false;
-    setStatus("Foto gereed. Voeg eventueel informatie toe en tik op Analyseer.", "success");
-  } catch (error) {
-    currentImageData = null;
-    event.target.value = "";
-    setStatus(error.message || "Deze foto kon niet worden verwerkt.", "error");
-  }
-}
-
-function number(value) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0;
-}
-
-function confidenceLabel(value) {
-  if (value === "hoog") return "Hoge zekerheid";
-  if (value === "middel") return "Redelijke zekerheid";
-  return "Lage zekerheid";
-}
-
-function addTextElement(parent, tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  node.textContent = text;
-  parent.appendChild(node);
-  return node;
-}
-
-function renderAnalysis(analysis) {
-  const total = analysis?.total || {};
-  const items = Array.isArray(analysis?.items) ? analysis.items : [];
-  const assumptions = Array.isArray(analysis?.assumptions) ? analysis.assumptions : [];
-
-  elements.totalBest.textContent = number(total.carbs_best_g);
-  elements.totalRange.textContent = `${number(total.carbs_min_g)}–${number(total.carbs_max_g)} g`;
-  elements.totalConfidence.textContent = confidenceLabel(total.confidence);
-  elements.totalConfidence.dataset.level = total.confidence || "laag";
-  elements.summary.textContent = analysis?.summary || "De maaltijd kon slechts beperkt worden beoordeeld.";
-
-  elements.items.replaceChildren();
-  if (!analysis?.meal_detected || items.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "empty-result";
-    empty.textContent = "Er werd geen duidelijke maaltijd herkend. Probeer een andere foto.";
-    elements.items.appendChild(empty);
-  } else {
-    for (const item of items) {
-      const card = document.createElement("article");
-      card.className = "food-item";
-      const heading = document.createElement("div");
-      heading.className = "food-heading";
-      addTextElement(heading, "h3", "", item.name || "Onderdeel");
-      addTextElement(heading, "strong", "food-carbs", `${number(item.carbs_best_g)} g`);
-      card.appendChild(heading);
-      addTextElement(card, "p", "portion", item.portion || "Portie onbekend");
-      addTextElement(card, "p", "range", `Geschat bereik: ${number(item.carbs_min_g)}–${number(item.carbs_max_g)} g`);
-      addTextElement(card, "p", "reasoning", item.reasoning || "Geen aanvullende uitleg.");
-      addTextElement(card, "span", `mini-confidence ${item.confidence || "laag"}`, confidenceLabel(item.confidence));
-      elements.items.appendChild(card);
-    }
-  }
-
-  elements.assumptions.replaceChildren();
-  for (const assumption of assumptions) addTextElement(elements.assumptions, "li", "", assumption);
-  elements.assumptionsSection.hidden = assumptions.length === 0;
-
-  elements.resultSection.hidden = false;
-  elements.resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-async function analyzeMeal() {
-  if (!currentImageData || analysisController) return;
-  if (readCredits() <= 0) {
-    updateCreditDisplay();
-    setStatus("Uw gratis scans zijn opgebruikt. Stuur uw ervaring en ontvang per mail toegang tot onbeperkt gratis gebruik.", "error");
-    elements.creditPanel.scrollIntoView({ behavior: "smooth", block: "center" });
-    return;
-  }
-
-  analysisController = new AbortController();
-  const timeout = setTimeout(() => analysisController?.abort(), REQUEST_TIMEOUT_MS);
-  setAnalyzing(true);
-  setStatus("De maaltijd wordt geanalyseerd. Dit kan enkele seconden duren…");
-
-  try {
-    const response = await fetch(`${API_BASE}/api/proxy`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: analysisController.signal,
-      body: JSON.stringify({
-        image: currentImageData,
-        description: elements.description.value.trim(),
-      }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || `De server antwoordde met status ${response.status}.`);
-    if (!data.analysis) throw new Error("Er werd geen bruikbaar resultaat ontvangen.");
-
-    renderAnalysis(data.analysis);
-    useCredit();
-    setStatus("Analyse voltooid.", "success");
-  } catch (error) {
-    const message = error.name === "AbortError"
-      ? "De analyse duurde te lang. Controleer uw verbinding en probeer opnieuw."
-      : error.message || "Er ging iets mis tijdens de analyse.";
-    setStatus(message, "error");
-  } finally {
-    clearTimeout(timeout);
-    analysisController = null;
-    setAnalyzing(false);
-  }
-}
-
-function supportedRecordingType() {
-  const candidates = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm", "audio/ogg;codecs=opus"];
-  return candidates.find((type) => MediaRecorder.isTypeSupported(type)) || "";
-}
-
-function stopMediaTracks() {
-  mediaStream?.getTracks().forEach((track) => track.stop());
-  mediaStream = null;
-}
-
-function resetRecordButton() {
-  clearTimeout(recordingTimer);
-  elements.recordBtn.classList.remove("recording");
-  elements.recordBtn.disabled = false;
-  elements.recordBtn.innerHTML = '<span aria-hidden="true">🎤</span> Spreek beschrijving in';
-}
-
-async function transcribeRecording(blob, mimeType) {
-  elements.recordBtn.disabled = true;
-  elements.recordBtn.textContent = "Omzetten naar tekst…";
-  setStatus("De opname wordt omgezet naar tekst…");
-
-  try {
-    const formData = new FormData();
-    const extension = mimeType.includes("mp4") ? "m4a" : mimeType.includes("ogg") ? "ogg" : "webm";
-    formData.append("audio", blob, `opname.${extension}`);
-    const response = await fetch(`${API_BASE}/api/whisper`, { method: "POST", body: formData });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "De opname kon niet worden verwerkt.");
-
-    if (data.text) {
-      const separator = elements.description.value.trim() ? " " : "";
-      elements.description.value = `${elements.description.value.trim()}${separator}${data.text}`.slice(0, 800);
-      updateCharacterCount();
-      setStatus("De ingesproken tekst is toegevoegd.", "success");
-    } else {
-      setStatus("Er werd geen duidelijke spraak herkend.", "error");
-    }
-  } catch (error) {
-    setStatus(error.message || "De opname kon niet worden verwerkt.", "error");
-  } finally {
-    resetRecordButton();
-  }
-}
-
-async function toggleRecording() {
-  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
-    setStatus("Spraakopname wordt niet door deze browser ondersteund.", "error");
-    return;
-  }
-
-  if (mediaRecorder?.state === "recording") {
-    mediaRecorder.stop();
-    return;
-  }
-
-  try {
-    mediaStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
-    });
-    const mimeType = supportedRecordingType();
-    mediaRecorder = mimeType ? new MediaRecorder(mediaStream, { mimeType }) : new MediaRecorder(mediaStream);
-    audioChunks = [];
-    mediaRecorder.addEventListener("dataavailable", (event) => {
-      if (event.data.size) audioChunks.push(event.data);
-    });
-    mediaRecorder.addEventListener("stop", async () => {
-      const actualType = mediaRecorder.mimeType || mimeType || "audio/webm";
-      const blob = new Blob(audioChunks, { type: actualType });
-      stopMediaTracks();
-      await transcribeRecording(blob, actualType.split(";")[0]);
-    }, { once: true });
-    mediaRecorder.start();
-    elements.recordBtn.classList.add("recording");
-    elements.recordBtn.innerHTML = '<span aria-hidden="true">⏹</span> Stop opname';
-    setStatus("Opname loopt… Tik opnieuw om te stoppen (maximaal 45 seconden).", "recording");
-    recordingTimer = setTimeout(() => {
-      if (mediaRecorder?.state === "recording") mediaRecorder.stop();
-    }, MAX_RECORDING_MS);
+    await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = url; });
+    return { source: img, width: img.naturalWidth, height: img.naturalHeight, close: () => URL.revokeObjectURL(url) };
   } catch {
-    stopMediaTracks();
-    resetRecordButton();
-    setStatus("Microfoontoegang is geweigerd of niet beschikbaar.", "error");
+    URL.revokeObjectURL(url);
+    const heic = /hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name);
+    throw new Error(heic ? 'Deze browser kan deze HEIC-foto niet omzetten. Kies op uw gsm een JPEG-versie of maak een nieuwe foto met “Maak foto”.' : 'Deze foto kan niet worden gelezen. Kies een JPEG-, PNG- of WebP-foto.');
   }
 }
-
-function updateCharacterCount() {
-  elements.charCount.textContent = `${elements.description.value.length}/800`;
+async function prepareImage(file) {
+  if (!file.size || file.size > 40 * 1024 * 1024) throw new Error('Kies een foto van maximaal 40 MB.');
+  if (!/^image\//.test(file.type) && !/\.(jpe?g|png|webp|hei[cf])$/i.test(file.name)) throw new Error('Kies een afbeeldingsbestand.');
+  if (/svg/i.test(file.type) || /\.svg$/i.test(file.name)) throw new Error('Kies een foto, geen SVG-tekening.');
+  const decoded = await decodeImage(file);
+  try {
+    if (!decoded.width || !decoded.height || decoded.width * decoded.height > 100_000_000) throw new Error('De resolutie van deze foto is te groot. Kies een kleinere versie.');
+    const scale = Math.min(1280 / decoded.width, 1280 / decoded.height, 1);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(decoded.width * scale));
+    canvas.height = Math.max(1, Math.round(decoded.height * scale));
+    const context = canvas.getContext('2d', { alpha: false });
+    if (!context) throw new Error('De foto kan op dit toestel niet worden verkleind.');
+    context.fillStyle = '#fff'; context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(decoded.source, 0, 0, canvas.width, canvas.height);
+    const data = canvas.toDataURL('image/jpeg', .84);
+    if (data.length > 3_700_000 || !data.startsWith('data:image/jpeg;base64,')) throw new Error('De foto blijft te groot. Kies een kleinere foto.');
+    return data;
+  } finally { decoded.close(); }
 }
+async function selectImage(event) {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file || !['idle', 'preparing'].includes(state.mode)) return;
+  const operation = ++state.operation;
+  state.retry = false; clearResult();
+  setMode('preparing'); status('Foto wordt verkleind…');
+  try {
+    const image = await prepareImage(file);
+    if (operation !== state.operation) return;
+    state.image = image; showPreview();
+    status('Foto klaar. Voeg eventueel informatie toe en analyseer uw maaltijd.', 'success');
 
+  } catch (error) {
+    if (operation !== state.operation) return;
+    status(`${error.message}${state.image ? ' Uw vorige foto blijft geselecteerd.' : ''}`, 'error');
+  } finally { if (operation === state.operation) setMode('idle'); }
+}
+async function requestJson(path, options, controller) {
+  let timedOut = false;
+  const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, REQUEST_TIMEOUT);
+  try {
+    const response = await fetch(`${API_BASE}${path}`, { ...options, signal: controller.signal });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(data.error || 'De service is tijdelijk niet beschikbaar. Probeer opnieuw.');
+      error.retryAfter = response.headers.get('Retry-After');
+      const seconds = Number(error.retryAfter);
+      if (response.status === 429 && Number.isFinite(seconds) && seconds > 0) error.message += ` Probeer over ongeveer ${Math.ceil(seconds / 60)} minuten opnieuw.`;
+      throw error;
+    }
+    return data;
+  } catch (error) {
+    if (timedOut) throw new Error('Dit duurde te lang. Uw foto en tekst blijven staan. Probeer opnieuw.');
+    if (error.name === 'AbortError') throw error;
+    if (!online() || error instanceof TypeError) throw new Error('De verbinding werd onderbroken. Controleer uw internet en probeer opnieuw.');
+    throw error;
+  } finally { clearTimeout(timeout); }
+}
+async function analyze() {
+  refreshCredits();
+  if (state.mode !== 'idle' || !state.image) return;
+  if (!online()) { status('Voor de analyse is internet nodig. Uw foto en tekst blijven staan.', 'error'); syncUI(); return; }
+  if (state.credits <= 0) { status('Uw gratis scans zijn opgebruikt. Stuur feedback en ontvang een code voor onbeperkt gratis scans.', 'error'); syncUI(); return; }
+  const operation = ++state.operation;
+  const controller = new AbortController(); state.controller = controller;
+  clearResult(); state.retry = false;
+  setMode('analyzing'); status('Uw maaltijd wordt geanalyseerd. Dit kan tot ongeveer een minuut duren.');
+
+  if (operation !== state.operation) return;
+  try {
+    const data = await requestJson('/api/proxy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: state.image, description: $('description').value.trim() }) }, controller);
+    if (operation !== state.operation) return;
+    state.analysis = normalizeAnalysis(data.analysis);
+    renderAnalysis(state.analysis);
+    if (state.analysis.meal_detected) {
+      useCredit();
+
+      status('Analyse voltooid.', 'success');
+    } else status('Geen duidelijke maaltijd herkend. Probeer een andere foto. Er is geen scan afgetrokken.');
+
+  } catch (error) {
+    if (operation !== state.operation) return;
+    state.retry = true;
+    status(error.name === 'AbortError' ? 'Analyse geannuleerd. Uw foto en tekst blijven staan.' : error.message, 'error');
+  } finally {
+    if (operation === state.operation) { state.controller = null; setMode('idle'); }
+  }
+}
+function addText(parent, tag, text, className = '') {
+  const node = document.createElement(tag); node.textContent = text; node.className = className; parent.appendChild(node); return node;
+}
+function certainty(level) { return ({ hoog: 'Hoge zekerheid', middel: 'Redelijke zekerheid', laag: 'Lage zekerheid' })[level]; }
+function renderAnalysis(analysis, context = '') {
+  if ($('settingsDialog').open) $('settingsDialog').close();
+  $('result-title').textContent = analysis.meal_detected ? 'Uw geschatte koolhydraten' : 'Geen bruikbare schatting';
+  $('totalPanel').hidden = !analysis.meal_detected;
+  $('noMealMessage').hidden = analysis.meal_detected;
+  $('totalConfidence').hidden = !analysis.meal_detected;
+  $('totalBest').textContent = formatGrams(analysis.total.carbs_best_g);
+  $('totalRange').textContent = `${formatGrams(analysis.total.carbs_min_g)}–${formatGrams(analysis.total.carbs_max_g)} g`;
+  $('totalConfidence').textContent = certainty(analysis.total.confidence);
+  $('totalConfidence').dataset.level = analysis.total.confidence;
+  $('summaryText').textContent = analysis.meal_detected ? analysis.summary : 'Er werd geen duidelijke maaltijd herkend. Maak een andere foto; dit betekent niet dat de maaltijd 0 g koolhydraten bevat.';
+  $('resultContext').textContent = context; $('resultContext').hidden = !context;
+  $('itemsList').replaceChildren();
+  $('explanationList').replaceChildren();
+  $('explanationDetails').open = false;
+  for (const item of analysis.items) {
+    const card = addText($('itemsList'), 'article', '', 'food-item');
+    const heading = addText(card, 'div', '', 'food-heading');
+    addText(heading, 'h3', item.name); addText(heading, 'strong', `${formatGrams(item.carbs_best_g)} g`, 'food-carbs');
+    addText(card, 'p', item.portion);
+    addText($('explanationList'), 'p', `${item.name}: ${formatGrams(item.carbs_min_g)}–${formatGrams(item.carbs_max_g)} g. ${item.reasoning}`, 'reasoning');
+  }
+  $('assumptionsList').replaceChildren();
+  analysis.assumptions.forEach(text => addText($('assumptionsList'), 'li', text));
+  $('assumptionsSection').hidden = !analysis.assumptions.length;
+  $('assumptionsSection').open = false;
+  $('resultSection').hidden = false;
+  syncUI(); focusAndScroll('result-title');
+}
+async function saveMeal() {
+  if (state.mode !== 'idle' || !state.image || !state.analysis?.meal_detected || state.resultDirty || state.savedMealId) return;
+  const entry = { id: crypto.randomUUID(), source: 'live-v1', date: Date.now(), image: state.image, description: $('description').value, analysis: state.analysis };
+  const history = addHistory(state.history, entry);
+  setMode('saving');
+  const saved = await persist(() => localData.put('history', history));
+  if (saved) { state.history = history; state.savedMealId = entry.id; }
+  $('saveMealStatus').textContent = saved ? 'Foto en resultaat bewaard bij Maaltijden.' : 'Bewaren is niet gelukt. Probeer opnieuw of maak ruimte vrij op uw toestel.';
+  $('saveMealStatus').hidden = false;
+  setMode('idle'); renderHistory();
+}
+function renderHistory() {
+  $('historyCount').textContent = '(' + state.history.length + ')';
+  $('historyList').replaceChildren();
+  if (!state.history.length) addText($('historyList'), 'p', 'Nog geen bewaarde maaltijden. Kies Bewaar maaltijd bij een resultaat.', 'field-help');
+  for (const entry of state.history) {
+    const date = new Date(entry.date).toLocaleString('nl-BE', { dateStyle: 'short', timeStyle: 'short' });
+    const button = addText($('historyList'), 'button', '', 'history-entry');
+    button.type = 'button';
+    if (entry.image) { const photo = addText(button, 'img', '', 'history-photo'); photo.src = entry.image; photo.alt = 'Maaltijdfoto'; photo.loading = 'lazy'; }
+    const text = addText(button, 'span', formatGrams(entry.analysis.total.carbs_best_g) + ' g · ' + entry.analysis.items.map(item => item.name).join(', '));
+    addText(text, 'small', date + (entry.image ? '' : ' · Oud resultaat zonder foto'));
+    button.addEventListener('click', () => {
+      if (state.mode !== 'idle') return;
+      const open = () => {
+        clearResult(); state.image = entry.image || null; $('description').value = entry.description || '';
+        state.analysis = entry.analysis; state.historical = !entry.image; state.savedMealId = entry.id;
+        state.retry = false; showPreview(); status('');
+        renderAnalysis(entry.analysis, 'Bewaarde maaltijd van ' + date + (entry.image ? '.' : '. Bij dit oude resultaat is geen foto bewaard.'));
+
+      };
+      if ((state.image || $('description').value) && !state.savedMealId) {
+        confirmDelete('Uw huidige maaltijd is nog niet bewaard. Wilt u toch de bewaarde maaltijd openen?', open, 'Maaltijd openen?', 'Openen');
+      } else open();
+    });
+  }
+  syncUI();
+}
+function stopTracks(stream) { stream?.getTracks().forEach(track => track.stop()); }
+function cancelWork() {
+  state.operation++;
+  state.controller?.abort(); state.controller = null;
+  const recording = state.recording;
+  state.recording = null;
+  if (recording) {
+    recording.cancelled = true;
+    clearInterval(recording.timer);
+    if (recording.recorder?.state === 'recording') recording.recorder.stop();
+    stopTracks(recording.stream);
+  }
+  setMode('idle');
+}
+async function toggleRecording() {
+  if (state.mode === 'recording') {
+    clearInterval(state.recording.timer);
+    setMode('transcribing'); state.recording.recorder.stop(); return;
+  }
+  if (state.mode !== 'idle' || !online() || !speechSupported()) return;
+  const operation = ++state.operation;
+  const recording = { cancelled: false, stream: null, recorder: null, timer: null, chunks: [] };
+  state.recording = recording;
+  setMode('permission'); status('Geef toestemming voor de microfoon om in te spreken.');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 } });
+    if (operation !== state.operation || recording.cancelled) { stopTracks(stream); return; }
+    recording.stream = stream;
+    const type = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm', 'audio/ogg;codecs=opus'].find(type => MediaRecorder.isTypeSupported(type));
+    const recorder = type ? new MediaRecorder(stream, { mimeType: type }) : new MediaRecorder(stream);
+    recording.recorder = recorder;
+    recorder.addEventListener('dataavailable', event => { if (event.data.size) recording.chunks.push(event.data); });
+    recorder.addEventListener('error', () => {
+      if (operation !== state.operation) return;
+      cancelWork(); status('De opname werd onderbroken. Probeer opnieuw of typ uw beschrijving.', 'error');
+    });
+    recorder.addEventListener('stop', () => finishRecording(recording, operation), { once: true });
+    recorder.start(); recording.startedAt = Date.now();
+    setMode('recording'); status('Opname loopt. Tik op Stop opname als u klaar bent.');
+    $('recordTimer').textContent = '0:00 / 0:45';
+    recording.timer = setInterval(() => {
+      const seconds = Math.min(45, Math.floor((Date.now() - recording.startedAt) / 1000));
+      $('recordTimer').textContent = `0:${String(seconds).padStart(2, '0')} / 0:45`;
+      if (seconds >= 45 && recorder.state === 'recording') { clearInterval(recording.timer); setMode('transcribing'); recorder.stop(); }
+    }, 250);
+  } catch (error) {
+    stopTracks(recording.stream);
+    if (operation !== state.operation) return;
+    state.recording = null; setMode('idle');
+    status(error.name === 'NotAllowedError' ? 'Microfoontoegang is geweigerd. U kunt toestemming wijzigen in de browserinstellingen of de beschrijving typen.' : 'De microfoon is niet beschikbaar. Probeer opnieuw of typ uw beschrijving.', 'error');
+  }
+}
+async function finishRecording(recording, operation) {
+  clearInterval(recording.timer); stopTracks(recording.stream);
+  if (recording.cancelled || operation !== state.operation) return;
+  const type = recording.recorder.mimeType || 'audio/webm';
+  const blob = new Blob(recording.chunks, { type });
+  state.recording = null;
+  const controller = new AbortController(); state.controller = controller;
+  setMode('transcribing'); status('Uw opname wordt omgezet naar tekst…');
+  try {
+    if (!blob.size) throw new Error('Er is geen opname ontvangen. Probeer opnieuw.');
+    if (blob.size > 5 * 1024 * 1024) throw new Error('Deze opname is te groot. Spreek een kortere beschrijving in.');
+    const form = new FormData();
+    form.append('audio', blob, `opname.${type.includes('mp4') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm'}`);
+    const data = await requestJson('/api/whisper', { method: 'POST', body: form }, controller);
+    if (operation !== state.operation) return;
+    if (typeof data.text !== 'string' || !data.text.trim()) throw new Error('Er werd geen duidelijke spraak herkend. Probeer opnieuw.');
+    const combined = [$('description').value.trim(), data.text.trim()].filter(Boolean).join(' ');
+    $('description').value = combined.slice(0, 800);
+    markResultDirty();
+    status(combined.length > 800 ? 'De tekst is toegevoegd, maar ingekort tot 800 tekens. Controleer uw beschrijving.' : 'Uw tekst is toegevoegd. Controleer de porties en tik op Analyseer maaltijd.', 'success');
+  } catch (error) {
+    if (operation === state.operation) status(error.name === 'AbortError' ? 'Opname geannuleerd.' : error.message, 'error');
+  } finally { if (operation === state.operation) { state.controller = null; setMode('idle'); } }
+}
 function resetApp() {
-  analysisController?.abort();
-  if (mediaRecorder?.state === "recording") mediaRecorder.stop();
-  currentImageData = null;
-  elements.cameraInput.value = "";
-  elements.fileInput.value = "";
-  elements.description.value = "";
-  updateCharacterCount();
-  if (previewUrl) URL.revokeObjectURL(previewUrl);
-  previewUrl = null;
-  elements.preview.removeAttribute("src");
-  elements.previewWrap.hidden = true;
-  elements.resultSection.hidden = true;
-  elements.analyzeButton.disabled = true;
-  setStatus("");
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  cancelWork();
+  state.image = null; state.retry = false;
+  $('cameraInput').value = ''; $('fileInput').value = ''; $('description').value = '';
+  clearResult(); showPreview();
+  status(''); syncUI(); focusAndScroll('scanner-title');
 }
-
-elements.cameraInput.addEventListener("change", handleImageSelection);
-elements.fileInput.addEventListener("change", handleImageSelection);
-elements.description.addEventListener("input", updateCharacterCount);
-elements.analyzeButton.addEventListener("click", analyzeMeal);
-elements.creditBox.addEventListener("click", handleCreditTap);
-elements.refillForm.addEventListener("submit", handleRefillSubmit);
-elements.refillCancel.addEventListener("click", () => elements.refillDialog.close());
-elements.recordBtn.addEventListener("click", toggleRecording);
-elements.resetBtn.addEventListener("click", resetApp);
-
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("service-worker.js").catch((error) => console.warn("Serviceworker-fout", error));
+function confirmDelete(text, action, title = 'Bewaarde gegevens verwijderen?', label = 'Verwijderen') {
+  $('confirmTitle').textContent = title; $('confirmAccept').textContent = label;
+  confirmAction = action; $('confirmText').textContent = text; $('confirmDialog').showModal();
+}
+async function clearSavedData() {
+  const cleared = await persist(() => localData.clear());
+  if (cleared) { state.history = []; state.savedMealId = null; }
+  renderHistory(); syncUI();
+  status(cleared ? 'Bewaarde maaltijden zijn verwijderd. Uw gratis scans blijven behouden.' : 'Verwijderen uit de toestelopslag is niet gelukt. Probeer opnieuw of wis de sitegegevens via uw browser.', cleared ? 'success' : 'error');
+}
+async function initializeStorage() {
+  try {
+    {
+      const history = await localData.get('history');
+      state.history = (Array.isArray(history) ? history : []).slice(0, 10).flatMap(entry => {
+        if (LOCAL_PREVIEW && entry?.source !== 'live-v1') return []; // Never present old demo output as a real scan.
+        try {
+          if (!Number.isFinite(entry.date) || typeof entry.id !== 'string') return [];
+          const image = validMealImage(entry.image) ? entry.image : null;
+          const description = typeof entry.description === 'string' ? entry.description.slice(0, 800) : '';
+          return [{ ...entry, image, description, analysis: normalizeAnalysis(entry.analysis) }];
+        } catch { return []; }
+      });
+    }
+    // Remove legacy automatic recovery data; explicitly saved meals stay intact.
+    await localData.delete('draft');
+    try { localStorage.removeItem('carbo_remember_meals'); } catch { /* Storage may be blocked. */ }
+  } catch { status('Bewaarde maaltijden konden niet worden geladen. U kunt wel een nieuwe maaltijd scannen.', 'error'); }
+  setMode('idle'); renderHistory();
+}
+function setupInstallation() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js').then(registration => {
+      const ready = () => { if (registration.waiting) { waitingWorker = registration.waiting; $('updateNotice').hidden = false; } };
+      ready();
+      registration.addEventListener('updatefound', () => {
+        const worker = registration.installing;
+        worker?.addEventListener('statechange', () => { if (worker.state === 'installed' && navigator.serviceWorker.controller) ready(); });
+      });
+      window.addEventListener('online', () => registration.update().catch(() => {}));
+    }).catch(() => status('Offline openen is in deze browser niet beschikbaar. Online kunt u de app blijven gebruiken.'));
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (updateRequested) location.reload(); });
+  }
+  $('updateBtn').addEventListener('click', async () => {
+    if (state.mode !== 'idle' || !waitingWorker) return;
+    if ((state.image || $('description').value) && !state.savedMealId) {
+      status('Bewaar eerst uw maaltijd of kies Nieuwe maaltijd voordat u bijwerkt.'); return;
+    }
+    updateRequested = true; waitingWorker.postMessage({ type: 'SKIP_WAITING' });
   });
 }
 
-updateCharacterCount();
-updateCreditDisplay();
+const helpTopics = {
+  cameraHelpBtn: ['Maak foto', 'Maak een nieuwe foto van uw maaltijd met de camera van uw gsm. Zorg dat het volledige bord goed zichtbaar is.'],
+  fileHelpBtn: ['Kies foto', 'Kies een bestaande foto van uw maaltijd uit de foto’s op uw toestel.'],
+  recordHelpBtn: ['Spreek in', 'Noem ingrediënten of hoeveelheden die u wilt toevoegen. Tik nogmaals om te stoppen. Uw woorden verschijnen als tekst bij Extra informatie.'],
+  portionHelpBtn: ['Portie verduidelijken', 'Pas de hoeveelheid of ingrediënten aan bij Extra informatie. Kies daarna Opnieuw analyseren om de schatting met dezelfde foto bij te werken.'],
+  descriptionHelpBtn: ['Extra informatie (optioneel)', 'Vermeld wat niet duidelijk op de foto staat, zoals saus, drank of een bekend gewicht. U kunt dit typen of inspreken. Dit veld mag leeg blijven.'],
+};
+for (const [id, [title, explanation]] of Object.entries(helpTopics)) {
+  $(id).addEventListener('click', () => {
+    $('helpTitle').textContent = title;
+    $('helpText').textContent = explanation;
+    $('helpDialog').showModal();
+  });
+}
+$('closeHelpBtn').addEventListener('click', () => $('helpDialog').close());
+
+$('cameraInput').addEventListener('change', selectImage);
+$('fileInput').addEventListener('change', selectImage);
+$('description').addEventListener('input', () => { markResultDirty(); state.retry = false; syncUI();  });
+$('analyzeButton').addEventListener('click', analyze);
+$('recordBtn').addEventListener('click', toggleRecording);
+$('cancelRecordBtn').addEventListener('click', () => { cancelWork(); status('Opname geannuleerd. Er wordt geen tekst toegevoegd.'); });
+$('cancelAnalysisBtn').addEventListener('click', () => { cancelWork(); state.retry = true; syncUI(); status('Analyse geannuleerd. Uw foto en tekst blijven staan.'); });
+$('resetBtn').addEventListener('click', resetApp);
+$('newMealBtn').addEventListener('click', resetApp);
+$('correctPortionBtn').addEventListener('click', () => {
+  if (state.mode !== 'idle' || !state.image || state.historical) return;
+  status('');
+  focusAndScroll('description');
+});
+$('mealsBtn').addEventListener('click', () => { $('historyPanel').open = true; $('settingsDialog').showModal(); });
+$('saveMealBtn').addEventListener('click', saveMeal);
+$('closeSettingsBtn').addEventListener('click', () => $('settingsDialog').close());
+$('refillBtn').addEventListener('click', () => { $('refillCode').value = ''; $('refillError').hidden = true; $('refillDialog').showModal(); });
+$('refillCancel').addEventListener('click', () => $('refillDialog').close());
+$('refillForm').addEventListener('submit', event => {
+  event.preventDefault();
+  if ($('refillCode').value.trim() !== FEEDBACK_CODE) { $('refillError').textContent = 'Deze code is niet correct. Controleer de code uit uw e-mail.'; $('refillError').hidden = false; return; }
+  state.credits = Infinity;
+  const saved = storageSet(CREDIT_KEY, creditValue(Infinity));
+  state.creditStorageBlocked = !saved;
+  $('refillDialog').close(); refreshCredits(); syncUI();
+  status(saved ? 'Bedankt voor uw feedback! Onbeperkt gratis scans is geactiveerd op dit toestel.' : 'Onbeperkt gratis scans is actief voor deze sessie. Uw browser blokkeert het bewaren van de code.', 'success');
+});
+$('feedbackLink').href = `mailto:fredje4711@gmail.com?subject=${encodeURIComponent('Feedback Koolhydraten Scanner')}&body=${encodeURIComponent('Hallo Freddy,\n\nMijn ervaring met de scanner:\n\nWat vond ik goed?\n\nWat kan beter?\n\nIk ontvang graag een code voor onbeperkt gratis scans.\n')}`;
+$('clearHistoryBtn').addEventListener('click', () => confirmDelete('Verwijder alle bewaarde maaltijden op dit toestel. Uw huidige maaltijd en gratis scans blijven behouden.', clearSavedData));
+$('confirmCancel').addEventListener('click', () => { confirmAction = null; $('confirmDialog').close(); });
+$('confirmAccept').addEventListener('click', () => { const action = confirmAction; confirmAction = null; $('confirmDialog').close(); action?.(); });
+$('confirmDialog').addEventListener('cancel', () => { confirmAction = null; });
+window.addEventListener('storage', event => {
+  if (event.key === CREDIT_KEY || event.key === null) { state.credits = parseCredits(storageGet(CREDIT_KEY)); state.creditStorageBlocked = false; refreshCredits(); syncUI(); }
+
+});
+window.addEventListener('offline', () => { if (['analyzing', 'transcribing', 'permission', 'recording'].includes(state.mode)) { cancelWork(); state.retry = Boolean(state.image); status('De verbinding is weggevallen. Uw foto en tekst blijven staan.', 'error'); } syncUI(); });
+window.addEventListener('online', syncUI);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (['permission', 'recording'].includes(state.mode)) { cancelWork(); status('De opname is geannuleerd omdat de app naar de achtergrond ging. Spreek opnieuw in als u klaar bent.'); }
+
+  }
+});
+window.addEventListener('pagehide', () => { if (state.mode !== 'idle') cancelWork();  });
+function keyboardChanged() {
+  const editing = ['TEXTAREA', 'INPUT'].includes(document.activeElement?.tagName);
+  const viewport = window.visualViewport;
+  document.body.classList.toggle('keyboard-open', Boolean(editing && viewport && innerHeight - viewport.height > 120));
+}
+window.visualViewport?.addEventListener('resize', keyboardChanged);
+document.addEventListener('focusin', keyboardChanged); document.addEventListener('focusout', keyboardChanged);
+refreshCredits(); syncUI(); setupInstallation(); initializeStorage();

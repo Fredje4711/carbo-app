@@ -1,12 +1,11 @@
 import {
   applyCors,
-  checkRateLimit,
-  clientIp,
   extractResponseText,
   isOriginAllowed,
   sendJson,
-  setRateLimitHeaders,
 } from "../lib/server.js";
+import { normalizeAnalysis } from "../lib/analysis.js";
+import { allowRequest } from "../lib/rate-limit.js";
 
 const MAX_BODY_BYTES = 4_000_000;
 const MAX_IMAGE_CHARACTERS = 3_700_000;
@@ -119,12 +118,9 @@ export default async function handler(req, res) {
     return sendJson(res, 415, { error: "Alleen JSON wordt ondersteund." });
   }
 
-  const rate = checkRateLimit(`analysis:${clientIp(req)}`, { limit: 10, windowMs: 10 * 60 * 1000 });
-  setRateLimitHeaders(res, rate);
-  if (!rate.allowed) return sendJson(res, 429, { error: "Te veel analyses. Probeer het over enkele minuten opnieuw." });
-
   const validationError = validateInput(req.body);
   if (validationError) return sendJson(res, 400, { error: validationError });
+  if (!await allowRequest(req, res, 'analysis', { limit: 10, windowMs: 10 * 60 * 1000 })) return;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -146,7 +142,7 @@ export default async function handler(req, res) {
             content: [
               {
                 type: "input_text",
-                text: `Beschrijving gebruiker: ${req.body.description.trim() || "geen aanvullende beschrijving"}`,
+                text: `Beschrijving gebruiker: ${(req.body.description || "").trim() || "geen aanvullende beschrijving"}`,
               },
               { type: "input_image", image_url: req.body.image, detail: "high" },
             ],
@@ -160,7 +156,8 @@ export default async function handler(req, res) {
             schema: MEAL_SCHEMA,
           },
         },
-        max_output_tokens: 1400,
+        store: false,
+        max_output_tokens: 3000,
       }),
     });
 
@@ -177,7 +174,8 @@ export default async function handler(req, res) {
     const outputText = extractResponseText(data);
     let analysis;
     try {
-      analysis = JSON.parse(outputText);
+      if (data.status === "incomplete") throw new Error("Incomplete response");
+      analysis = normalizeAnalysis(JSON.parse(outputText));
     } catch {
       console.error("Ongeldige gestructureerde uitvoer", { responseId: data?.id });
       return sendJson(res, 502, { error: "De analyseservice gaf een ongeldig resultaat." });

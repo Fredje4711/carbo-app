@@ -1,0 +1,8 @@
+test/
+tools/
+docs/
+README.md
+START-HIER.md
+*.log
+.env*
+node_modules/
