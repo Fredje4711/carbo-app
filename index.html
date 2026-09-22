@@ -11,8 +11,8 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="stylesheet" href="style.css?v=15">
-  <script type="module" src="entry.js?v=15"></script>
+  <link rel="stylesheet" href="style.css?v=20">
+  <script type="module" src="entry.js?v=20"></script>
 </head>
 <body>
   <header class="app-header"><div class="header-inner">
@@ -25,12 +25,11 @@
       <img src="icon-192.png" width="72" height="72" alt="Pictogram KH Scanner">
       <h2 id="installTitle">Uw maaltijdscanner op uw gsm</h2>
       <p id="detectedDevice" class="notice" role="status"></p>
-      <div id="desktopInstructions"><p>Deze toepassing is bedoeld om als app op uw gsm te installeren.</p><p><strong>Open dezelfde e-mail op uw gsm en tik daar op de meegestuurde link.</strong></p><p>De installatiepagina herkent dan automatisch of u een Android-gsm of een iPhone gebruikt en toont de bijbehorende installatiestappen.</p><p>Na installatie opent u de scanner met het pictogram op uw beginscherm.</p></div>
-      <div id="iosInstructions" hidden><h3>Installeren op iPhone</h3><ol><li>Open deze link in <strong>Safari</strong>. Staat hij in uw mail-app? Kies in het menu ‘Open in Safari’, of kopieer de link naar Safari.</li><li>Tik op <strong>Delen</strong> (het vierkant met de pijl omhoog). Soms staat Delen onder de knop met drie puntjes.</li><li>Scrol in het deelmenu naar <strong>Zet op beginscherm</strong>. Ontbreekt die optie? Kies ‘Wijzig taken’ en voeg ze toe.</li><li>Laat <strong>Open als webapp</strong> ingeschakeld als die optie verschijnt. Tik op <strong>Voeg toe</strong>.</li><li>Sluit Safari en tik op het pictogram <strong>KH Scanner</strong> op uw beginscherm.</li></ol></div>
-      <div id="androidInstructions" hidden><h3>Installeren op Android</h3><button id="gatewayInstallBtn" class="button primary" type="button" hidden>Installeer KH Scanner</button><ol><li>Open deze link in <strong>Chrome</strong>. Staat hij in uw mail-app? Kies ‘Open in browser’, of kopieer de link naar Chrome.</li><li>Tik op het menu <strong>⋮</strong> rechtsboven.</li><li>Kies <strong>Installeren en snelkoppeling maken</strong> en daarna <strong>Installeren</strong>. Afhankelijk van uw Chrome-versie heet dit ‘Toevoegen aan startscherm’ of ‘App installeren’. Bevestig de installatie.</li><li>Sluit Chrome en tik op het pictogram <strong>KH Scanner</strong> op uw beginscherm.</li></ol></div>
+      <div id="desktopInstructions"><p>Deze toepassing is bedoeld om als app op uw gsm te installeren.</p><p><strong>Open dezelfde e-mail op uw gsm en tik daar op de meegestuurde link.</strong></p><p>De installatiepagina herkent dan automatisch of u een Android-gsm of een iPhone gebruikt en toont de bijbehorende installatiestappen.</p><p>Na installatie vindt u KH Scanner terug op uw beginscherm of tussen uw andere apps. Tik op het pictogram om de scanner te openen.</p></div>
+      <div id="iosInstructions" hidden><h3>Installeren op iPhone</h3><ol><li>Tik in Safari op <strong>Delen</strong> (het vierkant met de pijl omhoog).</li><li>Kies <strong>Zet op beginscherm</strong>.</li><li>Laat <strong>Open als webapp</strong> ingeschakeld als die optie verschijnt en tik op <strong>Voeg toe</strong>.</li><li>Tik daarna op het pictogram <strong>KH Scanner</strong> op uw beginscherm of in uw appbibliotheek.</li></ol></div>
+      <div id="androidInstructions" hidden><h3>Installeren op Android</h3><button id="gatewayInstallBtn" class="button primary" type="button" hidden>Installeer KH Scanner</button><ol><li>Tik op het menu <strong>⋮</strong> van uw browser.</li><li>Kies <strong>Toevoegen aan startscherm</strong> of <strong>App installeren</strong> en bevestig de installatie.</li><li>Tik daarna op het pictogram <strong>KH Scanner</strong> op uw beginscherm of tussen uw andere apps.</li></ol></div>
       <p id="gatewayStatus" role="status" aria-live="polite"></p>
-      <p class="field-help">Al geïnstalleerd? Open KH Scanner via uw beginscherm, in plaats van via de e-mail.</p>
-      <details class="help-panel"><summary>Uitleg voor een ander toestel</summary><div class="button-row"><button id="chooseIos" class="button secondary" type="button">iPhone</button><button id="chooseAndroid" class="button secondary" type="button">Android</button></div></details>
+      <p class="field-help">Al geïnstalleerd? Tik op het pictogram van KH Scanner tussen uw apps. U hoeft de e-mail niet opnieuw te openen.</p>
       <noscript><p>Schakel JavaScript in en open deze link opnieuw om uw toestel te herkennen en de app te gebruiken.</p></noscript>
     </div>
   </section>
@@ -43,14 +42,14 @@
     <section class="scanner-card" aria-labelledby="scanner-title">
       <div class="intro"><h2 id="scanner-title" tabindex="-1">Wat ligt er op uw bord?</h2><p>Maak of kies een foto van uw maaltijd.</p></div>
       <div class="upload-grid">
-        <label class="upload-button" for="cameraInput"><span aria-hidden="true">📷</span> Maak foto<input id="cameraInput" class="visually-hidden" type="file" accept="image/*,.heic,.heif" capture="environment"></label>
-        <label class="upload-button secondary" for="fileInput"><span aria-hidden="true">🖼️</span> Kies foto<input id="fileInput" class="visually-hidden" type="file" accept="image/*,.heic,.heif"></label>
+        <div class="control-with-help"><label class="upload-button" for="cameraInput"><span aria-hidden="true">📷</span> Maak foto<input id="cameraInput" class="visually-hidden" type="file" accept="image/*,.heic,.heif" capture="environment"></label><button id="cameraHelpBtn" class="info-button" type="button" aria-label="Uitleg bij Maak foto" aria-haspopup="dialog" aria-controls="helpDialog"><span aria-hidden="true">ⓘ</span></button></div>
+        <div class="control-with-help"><label class="upload-button secondary" for="fileInput"><span aria-hidden="true">🖼️</span> Kies foto<input id="fileInput" class="visually-hidden" type="file" accept="image/*,.heic,.heif"></label><button id="fileHelpBtn" class="info-button" type="button" aria-label="Uitleg bij Kies foto" aria-haspopup="dialog" aria-controls="helpDialog"><span aria-hidden="true">ⓘ</span></button></div>
       </div>
       <figure id="previewWrap" class="preview-wrap" hidden><img id="preview" alt="Geselecteerde maaltijdfoto"></figure>
       <div class="description-block">
-        <div class="field-heading"><label for="description">Extra informatie <span>(optioneel)</span></label><output id="charCount" for="description">0/800</output></div>
+        <div class="field-heading"><label for="description">Extra informatie <span>(optioneel)</span></label><button id="descriptionHelpBtn" class="info-button" type="button" aria-label="Uitleg bij Extra informatie" aria-haspopup="dialog" aria-controls="helpDialog"><span aria-hidden="true">ⓘ</span></button><output id="charCount" for="description">0/800</output></div>
         <textarea id="description" maxlength="800" rows="2" placeholder="Bijv. 200 g gekookte pasta, saus, drank…"></textarea>
-        <div class="speech-row"><button id="recordBtn" class="button secondary" type="button"><span aria-hidden="true">🎤</span> Spreek in</button><output id="recordTimer" aria-label="Opnameduur" hidden>0:00 / 0:45</output><button id="cancelRecordBtn" class="button ghost" type="button" hidden>Opname annuleren</button></div>
+        <div class="speech-row"><button id="recordBtn" class="button secondary" type="button"><span aria-hidden="true">🎤</span> Spreek in</button><button id="recordHelpBtn" class="info-button" type="button" aria-label="Uitleg bij Spreek in" aria-haspopup="dialog" aria-controls="helpDialog"><span aria-hidden="true">ⓘ</span></button><output id="recordTimer" aria-label="Opnameduur" hidden>0:00 / 0:45</output><button id="cancelRecordBtn" class="button ghost" type="button" hidden>Opname annuleren</button></div>
         <p id="speechHelp" class="field-help" hidden>Tik om op te nemen. Tik opnieuw om te stoppen.</p>
       </div>
       <details class="help-panel"><summary>Tips voor een betere schatting</summary><ul><li>Fotografeer het volledige bord in goed licht.</li><li>Vermeld bekende porties in gram of milliliter en of ze gekookt of ongekookt zijn.</li><li>Noem dranken, saus en minder zichtbare ingrediënten.</li><li>Controleer de schatting met het etiket of een voedingsmiddelentabel.</li></ul></details>
@@ -67,13 +66,14 @@
       <details id="explanationDetails" class="help-panel"><summary>Toelichting & onzekerheden</summary><p id="summaryText"></p><div id="explanationList"></div>
       <details id="assumptionsSection" class="note-panel" hidden><summary>Aannames en onzekerheden</summary><ul id="assumptionsList"></ul></details>
       <p class="field-help">Zekerheid is een inschatting van het model.</p></details>
-      <div class="button-row"><button id="correctPortionBtn" class="button secondary" type="button">Portie verduidelijken</button><button id="newMealBtn" class="button primary" type="button">Nieuwe maaltijd</button></div>
+      <div class="button-row"><div class="control-with-help"><button id="correctPortionBtn" class="button secondary" type="button">Portie verduidelijken</button><button id="portionHelpBtn" class="info-button" type="button" aria-label="Uitleg bij Portie verduidelijken" aria-haspopup="dialog" aria-controls="helpDialog"><span aria-hidden="true">ⓘ</span></button></div><button id="newMealBtn" class="button primary" type="button">Nieuwe maaltijd</button></div>
     </section>
     <aside class="medical-warning"><p><strong>Dit blijft een schatting.</strong> Niet als enige basis voor een insulinedosis.</p></aside>
 
   </main>
-  <footer class="app-footer"><button id="settingsBtn" type="button" class="text-button">Meer & instellingen</button><p>© Freddy Sleeuwaert · <span id="appVersion">3.1.1</span></p></footer>
+  <footer class="app-footer"><button id="settingsBtn" type="button" class="text-button">Meer & instellingen</button><p>© Freddy Sleeuwaert · <span id="appVersion">3.2.0</span></p></footer>
 
+  <dialog id="helpDialog" aria-labelledby="helpTitle" aria-describedby="helpText"><h2 id="helpTitle"></h2><p id="helpText"></p><button id="closeHelpBtn" class="button primary" type="button" autofocus>Begrepen</button></dialog>
   <dialog id="settingsDialog" aria-labelledby="settingsTitle"><div class="settings-heading"><h2 id="settingsTitle">Meer & instellingen</h2><button id="closeSettingsBtn" type="button" class="button ghost">Sluiten</button></div>    <details id="historyPanel" class="utility-panel"><summary>Recente maaltijden <span id="historyCount">(0)</span></summary><p class="field-help">Maximaal 10 resultaten op dit toestel, zonder foto of opname.</p><div id="historyList"></div><button id="clearHistoryBtn" class="button ghost" type="button" disabled>Geschiedenis wissen</button></details>
     <details class="utility-panel"><summary>Privacy &amp; bewaren</summary>
       <label class="setting"><input id="rememberToggle" type="checkbox"> Bewaar mijn sessie en recente resultaten op dit toestel</label>

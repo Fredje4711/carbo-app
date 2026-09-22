@@ -1,4 +1,4 @@
-# Koolhydraten Scanner 3.1.1
+# Koolhydraten Scanner 3.2.0
 
 Mobiele PWA met Vercel-functies voor een voorzichtige koolhydraatschatting en Nederlandse spraakomzetting. GitHub blijft de bron; Vercel blijft de hosting. Begin bij [START-HIER.md](START-HIER.md). Zie ook [de correctie na uw gebruikerstest](docs/CORRECTIE-COMPACT.md).
 

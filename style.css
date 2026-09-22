@@ -690,3 +690,14 @@ html { scroll-padding-bottom: 12px; }
 .installation-card li { padding-left: 3px; margin: 12px 0; }
 #gatewayStatus:empty { display: none; }
 #result-title { scroll-margin-top: 16px; }
+
+/* Uitleg is apart bedienbaar, zonder camera of microfoon te starten. */
+.control-with-help { display: flex; align-items: stretch; gap: 2px; min-width: 0; }
+.control-with-help > .button, .control-with-help > .upload-button { flex: 1; min-width: 0; }
+.info-button { flex: 0 0 36px; width: 36px; min-height: 44px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--primary); font-size: 1.25rem; cursor: pointer; }
+.info-button:hover { background: #e8f3fc; }
+.field-heading { gap: 2px; }
+.field-heading .info-button { min-height: 36px; }
+.field-heading output { margin-left: auto; }
+#helpDialog p { margin: 12px 0 18px; }
+#helpDialog > button { width: 100%; }

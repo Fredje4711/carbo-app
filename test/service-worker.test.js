@@ -9,7 +9,7 @@ function worker() {
   vm.runInNewContext(source, {
     URL, Response, AbortController, setTimeout, clearTimeout,
     self: { registration: { scope: 'https://example.com/' }, location: { origin: 'https://example.com' }, clients: { claim: async () => {} }, skipWaiting: () => { skipped = true; }, addEventListener: (type, action) => { events[type] = action; } },
-    caches: { keys: async () => ['carbo-app-v7', 'carbo-app-v15', 'other-app'], delete: async key => { deleted.push(key); }, match: async () => fallback, open: async () => ({ addAll: async () => {}, match: async () => fallback, put: async (...args) => saved.push(args) }) },
+    caches: { keys: async () => ['carbo-app-v7', 'carbo-app-v20', 'other-app'], delete: async key => { deleted.push(key); }, match: async () => fallback, open: async () => ({ addAll: async () => {}, match: async () => fallback, put: async (...args) => saved.push(args) }) },
     fetch: async () => new Response('server error', { status: 503 }),
   });
   return { events, deleted, saved, skipped: () => skipped };

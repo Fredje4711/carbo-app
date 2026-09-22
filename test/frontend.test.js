@@ -182,3 +182,17 @@ test('oude lokale demoresultaten worden niet als echte scans hersteld', async ()
   assert.equal(app.state.history.length, 0); assert.equal(app.state.pendingDraft.analysis, null);
   assert.ok(app.state.pendingDraft.image);
 });
+
+ test('uitlegvensters bewaren de invoer en starten geen scan of opname', async () => {
+  let requests = 0;
+  const { app, get } = harness({ fetch: async () => { requests++; } });
+  app.state.image = 'data:image/jpeg;base64,dGVzdA=='; get('description').value = '100 g friet';
+  for (const [id, title] of [['cameraHelpBtn', 'Maak foto'], ['fileHelpBtn', 'Kies foto'], ['recordHelpBtn', 'Spreek in'], ['portionHelpBtn', 'Portie verduidelijken'], ['descriptionHelpBtn', 'Extra informatie (optioneel)']]) {
+    await get(id).emit('click');
+    assert.equal(get('helpDialog').open, true); assert.equal(get('helpTitle').textContent, title);
+    assert.ok(get('helpText').textContent.length > 20);
+    await get('closeHelpBtn').emit('click'); assert.equal(get('helpDialog').open, false);
+  }
+  assert.equal(requests, 0); assert.equal(app.state.mode, 'idle'); assert.equal(app.state.recording, null);
+  assert.equal(app.state.credits, 50); assert.ok(app.state.image); assert.equal(get('description').value, '100 g friet');
+});

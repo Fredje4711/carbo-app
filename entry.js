@@ -1,4 +1,4 @@
-import { devicePlatform, scannerAllowed } from './lib/installation.js?v=15';
+import { devicePlatform, scannerAllowed } from './lib/installation.js?v=20';
 
 const $ = id => document.getElementById(id);
 const device = devicePlatform(navigator);
@@ -22,7 +22,7 @@ async function openScanner() {
   }
   launched = true;
   try {
-    await import('./script.js?v=15');
+    await import('./script.js?v=20');
     $('installationGate').hidden = true;
     $('application').hidden = false;
   } catch {
@@ -37,7 +37,7 @@ window.addEventListener('beforeinstallprompt', event => {
 });
 window.addEventListener('appinstalled', () => {
   promptEvent = null; showInstructions(selected);
-  $('gatewayStatus').textContent = 'Installatie voltooid. Sluit deze pagina en open KH Scanner via het pictogram op uw beginscherm.';
+  $('gatewayStatus').textContent = 'Installatie voltooid. U vindt KH Scanner op uw beginscherm of in het overzicht van al uw apps. Tik op het pictogram om de app te openen.';
 });
 $('gatewayInstallBtn').addEventListener('click', async () => {
   if (!promptEvent) return;
@@ -45,11 +45,9 @@ $('gatewayInstallBtn').addEventListener('click', async () => {
   try {
     await prompt.prompt();
     const choice = await prompt.userChoice;
-    $('gatewayStatus').textContent = choice.outcome === 'accepted' ? 'Open na installatie KH Scanner via het pictogram op uw beginscherm.' : 'Installatie geannuleerd. U kunt de stappen hieronder volgen om later te installeren.';
+    $('gatewayStatus').textContent = choice.outcome === 'accepted' ? 'Na installatie vindt u KH Scanner op uw beginscherm of in het overzicht van al uw apps. Tik op het pictogram om de app te openen.' : 'De installatie is niet bevestigd. Volg de stappen hieronder om de app alsnog te installeren.';
   } catch { $('gatewayStatus').textContent = 'Volg de stappen hieronder om via het browsermenu te installeren.'; }
 });
-$('chooseIos').addEventListener('click', () => showInstructions('ios'));
-$('chooseAndroid').addEventListener('click', () => showInstructions('android'));
 displayMode.addEventListener?.('change', openScanner);
 showInstructions(device);
 openScanner();

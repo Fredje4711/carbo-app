@@ -1,6 +1,6 @@
-import { normalizeAnalysis, formatGrams } from './lib/analysis.js?v=15';
-import { createLocalData, validDraft, addHistory } from './lib/local-data.js?v=15';
-import { CREDIT_KEY, FEEDBACK_CODE, parseCredits, creditValue } from './lib/credits.js?v=15';
+import { normalizeAnalysis, formatGrams } from './lib/analysis.js?v=20';
+import { createLocalData, validDraft, addHistory } from './lib/local-data.js?v=20';
+import { CREDIT_KEY, FEEDBACK_CODE, parseCredits, creditValue } from './lib/credits.js?v=20';
 
 const API_BASE = location.hostname.endsWith('github.io') ? 'https://carbo-app.vercel.app' : '';
 const REQUEST_TIMEOUT = 55_000;
@@ -408,6 +408,22 @@ function setupInstallation() {
   });
 }
 
+const helpTopics = {
+  cameraHelpBtn: ['Maak foto', 'Maak een nieuwe foto van uw maaltijd met de camera van uw gsm. Zorg dat het volledige bord goed zichtbaar is.'],
+  fileHelpBtn: ['Kies foto', 'Kies een bestaande foto van uw maaltijd uit de foto’s op uw toestel.'],
+  recordHelpBtn: ['Spreek in', 'Noem ingrediënten of hoeveelheden die u wilt toevoegen. Tik nogmaals om te stoppen. Uw woorden verschijnen als tekst bij Extra informatie.'],
+  portionHelpBtn: ['Portie verduidelijken', 'Pas de hoeveelheid of ingrediënten aan bij Extra informatie. Kies daarna Opnieuw analyseren om de schatting met dezelfde foto bij te werken.'],
+  descriptionHelpBtn: ['Extra informatie (optioneel)', 'Vermeld wat niet duidelijk op de foto staat, zoals saus, drank of een bekend gewicht. U kunt dit typen of inspreken. Dit veld mag leeg blijven.'],
+};
+for (const [id, [title, explanation]] of Object.entries(helpTopics)) {
+  $(id).addEventListener('click', () => {
+    $('helpTitle').textContent = title;
+    $('helpText').textContent = explanation;
+    $('helpDialog').showModal();
+  });
+}
+$('closeHelpBtn').addEventListener('click', () => $('helpDialog').close());
+
 $('cameraInput').addEventListener('change', selectImage);
 $('fileInput').addEventListener('change', selectImage);
 $('description').addEventListener('input', () => { markResultDirty(); state.retry = false; syncUI(); scheduleSave(); });
@@ -419,7 +435,7 @@ $('resetBtn').addEventListener('click', resetApp);
 $('newMealBtn').addEventListener('click', resetApp);
 $('correctPortionBtn').addEventListener('click', () => {
   if (state.mode !== 'idle' || !state.image || state.historical) return;
-  status('Verduidelijk hieronder de portie, bijvoorbeeld “slechts 100 g gekookte pasta”. Analyseer daarna opnieuw; dit gebruikt één scan.');
+  status('');
   focusAndScroll('description');
 });
 $('settingsBtn').addEventListener('click', () => $('settingsDialog').showModal());
