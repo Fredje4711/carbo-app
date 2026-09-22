@@ -1,12 +1,10 @@
 import Busboy from "busboy";
 import {
   applyCors,
-  checkRateLimit,
-  clientIp,
   isOriginAllowed,
   sendJson,
-  setRateLimitHeaders,
 } from "../lib/server.js";
+import { allowRequest } from "../lib/rate-limit.js";
 
 export const config = { api: { bodyParser: false } };
 
@@ -59,6 +57,10 @@ function readAudio(req) {
       resolve(audio);
     });
     busboy.on("error", reject);
+    req.on("aborted", () => {
+      busboy.destroy();
+      reject(new Error("Upload onderbroken"));
+    });
     req.pipe(busboy);
   });
 }
@@ -81,9 +83,7 @@ export default async function handler(req, res) {
   const contentLength = Number(req.headers["content-length"] || 0);
   if (contentLength > MAX_AUDIO_BYTES + 100_000) return sendJson(res, 413, { error: "De opname is te groot." });
 
-  const rate = checkRateLimit(`transcription:${clientIp(req)}`, { limit: 15, windowMs: 10 * 60 * 1000 });
-  setRateLimitHeaders(res, rate);
-  if (!rate.allowed) return sendJson(res, 429, { error: "Te veel opnames. Probeer het over enkele minuten opnieuw." });
+  if (!await allowRequest(req, res, 'transcription', { limit: 15, windowMs: 10 * 60 * 1000 })) return;
 
   let audio;
   try {

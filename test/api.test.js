@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { extractResponseText, isTrustedVercelPreview } from "../lib/server.js";
 import analysisHandler, { validateInput } from "../api/proxy.js";
+import { meal, noMeal } from './fixtures.js';
 
 const validImage = `data:image/jpeg;base64,${Buffer.from("test").toString("base64")}`;
 
@@ -42,7 +43,7 @@ test("analysehandler bepaalt zelf endpoint, model en prompt", async () => {
       ok: true,
       json: async () => ({
         id: "resp_test",
-        output: [{ content: [{ type: "output_text", text: JSON.stringify({ meal_detected: false }) }] }],
+        output: [{ content: [{ type: "output_text", text: JSON.stringify(noMeal) }] }],
       }),
     };
   };
@@ -67,9 +68,37 @@ test("analysehandler bepaalt zelf endpoint, model en prompt", async () => {
     assert.equal(captured.body.model, "gpt-4o-mini");
     assert.equal(captured.body.input[0].content[1].type, "input_image");
     assert.equal("messages" in captured.body, false);
+    assert.equal(captured.body.store, false);
   } finally {
     globalThis.fetch = previousFetch;
     if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
     else process.env.OPENAI_API_KEY = previousKey;
+  }
+});
+
+test('analysehandler weigert onvolledige of tegenstrijdige resultaten en accepteert een ontbrekende beschrijving', async () => {
+  const previousKey = process.env.OPENAI_API_KEY;
+  const previousFetch = globalThis.fetch;
+  process.env.OPENAI_API_KEY = 'test-key';
+  try {
+    for (const [output, status, expected] of [
+      [meal, 'completed', 200], [noMeal, 'completed', 200],
+      [{ meal_detected: false }, 'completed', 502],
+      [meal, 'incomplete', 502],
+      [{ ...meal, items: [{ ...meal.items[0], carbs_min_g: 100 }] }, 'completed', 502],
+    ]) {
+      globalThis.fetch = async (_url, options) => {
+        assert.match(JSON.parse(options.body).input[0].content[0].text, /geen aanvullende beschrijving/);
+        return { ok: true, json: async () => ({ status, output_text: JSON.stringify(output) }) };
+      };
+      const result = {};
+      const res = { setHeader() {}, status(code) { result.code = code; return this; }, json(data) { result.data = data; return this; } };
+      await analysisHandler({ method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': '192.0.2.20' }, body: { image: validImage } }, res);
+      assert.equal(result.code, expected);
+      if (expected === 200 && output.meal_detected) assert.equal(result.data.analysis.total.carbs_best_g, 64);
+    }
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = previousKey;
   }
 });
