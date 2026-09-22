@@ -1,37 +1,32 @@
-# Koolhydraten Scanner — projectmap
+# Koolhydraten Scanner — start hier
 
-Dit is de volledige werkmap voor versie 3.0.0.
+De actieve werkmap is `Koolhydraten scanner 5`. De compacte versie is 3.0.1.
 
-- GitHub: https://github.com/Fredje4711/carbo-app
-- Online app (bestaande gepubliceerde versie): https://carbo-app.vercel.app
-- Werkbranch: `codex/mobile-improvements`
-- Basis: `dd4f2b9` van 9 augustus 2026. De oorspronkelijke map is behouden.
-
-## Lokaal openen
-
-Open een terminal in deze map en voer uit:
+## Openen met echte fotoanalyse
 
 ```powershell
-node tools/dev-server.mjs --demo
+node tools/dev-server.mjs
 ```
 
-Open vervolgens http://127.0.0.1:4174. Deze duidelijk gemarkeerde testversie gebruikt vaste voorbeeldresultaten en verstuurt niets naar OpenAI. Gebruik een willekeurige testafbeelding, bijvoorbeeld `icon-192.png`. In de beschrijving kunt u `test:geen`, `test:fout` en `test:traag` invullen voor bijzondere situaties. Deze demo is geen controle van de voedingskundige nauwkeurigheid.
+Open **http://127.0.0.1:4174** op deze laptop. De geselecteerde foto en eventuele spraak gaan via de lokale server naar de bestaande Vercel-service op https://carbo-app.vercel.app. Er is geen API-sleutel op de laptop nodig. Dezelfde verwerking en eventuele serverkosten als in de online app zijn van toepassing.
 
-Voor de echte lokale server: `node tools/dev-server.mjs`. Deze gebruikt poort 4173 en vereist een serveromgevingsvariabele `OPENAI_API_KEY` voor echte analyses. Open de app via een server, niet door dubbelklikken op index.html.
+De eerdere demo met vaste pastaresultaten is verwijderd. `--demo` wordt geweigerd; er is geen terugval naar voorbeeldresultaten bij fouten.
 
-## Controleren
+## Compacte opzet
+
+- Foto kiezen, extra informatie en analyseren staan samen in één compact formulier.
+- Het resultaat vervangt het formulier; u ziet geen lange dubbele pagina.
+- Voedingsmiddelen en grammen staan kort onder elkaar. Toelichting is uitklapbaar.
+- Geschiedenis, installatie en privacy staan onder Meer & instellingen.
+- De bestaande feedbackcode geeft onbeperkt gratis scans.
+
+## Controleren en publiceren
 
 ```powershell
 node tools/check.mjs
 node --test test/*.test.js
 ```
 
-Deze opdrachten werken ook wanneer de lokale npm-launcher verkeerd geconfigureerd is. Bij een nieuwe installatie zijn de dependencies uit `package-lock.json` nodig (`npm ci`).
+De wijzigingen staan op `codex/mobile-improvements`. Productie op Vercel is nog niet vervangen. De lokale versie gebruikt de bestaande productie-API; voor een test van de gewijzigde serverfuncties gebruikt u een Vercel-preview of `node tools/dev-server.mjs --local-api` met `OPENAI_API_KEY` in de serveromgeving.
 
-## Publiceren
-
-De app blijft bij Vercel. Het project hoeft niet opnieuw aangemaakt te worden. De wijzigingen staan lokaal op een aparte branch; ze zijn nog niet naar GitHub gepusht of in productie gepubliceerd. Eerst de mobiele acceptatiecontrole in `docs/MOBIELE-CONTROLE.md` uitvoeren, dan een Vercel-preview via de bestaande repository en ten slotte de productiebranch bijwerken.
-
-De geheime OpenAI-sleutel blijft in Vercel; er is geen kopie van die sleutel nodig in deze map. De bestaande feedbackcode blijft geldig en geeft vanaf deze versie onbeperkte gratis scans op het betreffende toestel.
-
-Zie `README.md` voor implementatie en `docs/MOBIELE-CONTROLE.md` voor de resterende fysieke toestelcontroles.
+De oorspronkelijke versie blijft in Git beschikbaar onder commit `dd4f2b9`.

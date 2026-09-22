@@ -9,13 +9,13 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="stylesheet" href="style.css?v=10">
-  <script type="module" src="script.js?v=10"></script>
+  <link rel="stylesheet" href="style.css?v=12">
+  <script type="module" src="script.js?v=12"></script>
 </head>
 <body>
   <header class="app-header"><div class="header-inner">
     <img class="app-mark" src="icon-192.png" width="44" height="44" alt="">
-    <div><p class="eyebrow">Educatieve schatting</p><h1>Koolhydraten Scanner</h1></div>
+    <div><h1>Koolhydraten Scanner</h1></div>
   </div></header>
   <main class="page-shell">
     <noscript><p class="notice">Schakel JavaScript in om een foto te kunnen analyseren.</p></noscript>
@@ -23,7 +23,7 @@
     <div id="updateNotice" class="notice" hidden><p>Een nieuwe versie is klaar. Rond eerst uw maaltijd af.</p><button id="updateBtn" class="button secondary" type="button">Nieuwe versie openen</button></div>
     <div id="restoreNotice" class="notice" hidden><p>Er staat nog een maaltijd van uw vorige sessie op dit toestel.</p><div class="button-row"><button id="restoreBtn" class="button secondary" type="button">Maaltijd herstellen</button><button id="discardDraftBtn" class="button ghost" type="button">Verwijderen</button></div></div>
     <section class="scanner-card" aria-labelledby="scanner-title">
-      <div class="intro"><h2 id="scanner-title" tabindex="-1">Wat ligt er op uw bord?</h2><p>Fotografeer uw volledige maaltijd. Vermeld porties die u kent.</p></div>
+      <div class="intro"><h2 id="scanner-title" tabindex="-1">Wat ligt er op uw bord?</h2><p>Maak of kies een foto van uw maaltijd.</p></div>
       <div class="upload-grid">
         <label class="upload-button" for="cameraInput"><span aria-hidden="true">📷</span> Maak foto<input id="cameraInput" class="visually-hidden" type="file" accept="image/*,.heic,.heif" capture="environment"></label>
         <label class="upload-button secondary" for="fileInput"><span aria-hidden="true">🖼️</span> Kies foto<input id="fileInput" class="visually-hidden" type="file" accept="image/*,.heic,.heif"></label>
@@ -31,25 +31,32 @@
       <figure id="previewWrap" class="preview-wrap" hidden><button id="previewButton" type="button" aria-label="Maaltijdfoto vergroten"><img id="preview" alt="Geselecteerde maaltijdfoto"></button><figcaption>Tik op de foto om te vergroten.</figcaption></figure>
       <div class="description-block">
         <div class="field-heading"><label for="description">Extra informatie <span>(optioneel)</span></label><output id="charCount" for="description">0/800</output></div>
-        <textarea id="description" maxlength="800" rows="3" placeholder="Bijvoorbeeld: 200 g gekookte pasta, roomsaus en een glas frisdrank."></textarea>
+        <textarea id="description" maxlength="800" rows="2" placeholder="Bijv. 200 g gekookte pasta, saus, drank…"></textarea>
         <div class="speech-row"><button id="recordBtn" class="button secondary" type="button"><span aria-hidden="true">🎤</span> Spreek in</button><output id="recordTimer" aria-label="Opnameduur" hidden>0:00 / 0:45</output><button id="cancelRecordBtn" class="button ghost" type="button" hidden>Opname annuleren</button></div>
-        <p id="speechHelp" class="field-help">Tik om op te nemen. Tik opnieuw om te stoppen.</p>
+        <p id="speechHelp" class="field-help" hidden>Tik om op te nemen. Tik opnieuw om te stoppen.</p>
       </div>
       <details class="help-panel"><summary>Tips voor een betere schatting</summary><ul><li>Fotografeer het volledige bord in goed licht.</li><li>Vermeld bekende porties in gram of milliliter en of ze gekookt of ongekookt zijn.</li><li>Noem dranken, saus en minder zichtbare ingrediënten.</li><li>Controleer de schatting met het etiket of een voedingsmiddelentabel.</li></ul></details>
+  <div id="actionBar" class="action-bar"><div class="action-inner"><button id="analyzeButton" class="button primary" type="button" disabled>Analyseer maaltijd</button><button id="cancelAnalysisBtn" class="button ghost" type="button" hidden>Annuleren</button><button id="resetBtn" class="button ghost" type="button">Wissen</button></div></div>
       <div id="statusMessage" class="status" role="status" aria-live="polite" aria-atomic="true" hidden></div>
       <div class="credit-panel"><p id="creditInfo">Gratis scans: <strong id="creditCount">50</strong></p><button id="refillBtn" class="text-button" type="button">Feedback &amp; scans</button></div>
     </section>
     <section id="resultSection" class="result-card" aria-labelledby="result-title" hidden>
       <p id="resultContext" class="field-help" hidden></p>
       <div class="result-heading"><h2 id="result-title" tabindex="-1">Uw geschatte koolhydraten</h2><span id="totalConfidence" class="confidence"></span></div>
+      <p id="noMealMessage" hidden>Probeer een duidelijkere foto. Er is geen scan afgetrokken.</p>
       <div id="totalPanel" class="total-panel"><div><span>Beste schatting</span><strong><span id="totalBest">–</span> g</strong></div><div><span>Geschat bereik</span><strong id="totalRange">–</strong></div></div>
-      <p id="summaryText"></p><div id="itemsList" class="items-list"></div>
+      <div id="itemsList" class="items-list"></div>
+      <details id="explanationDetails" class="help-panel"><summary>Toelichting & onzekerheden</summary><p id="summaryText"></p><div id="explanationList"></div>
       <details id="assumptionsSection" class="note-panel" hidden><summary>Aannames en onzekerheden</summary><ul id="assumptionsList"></ul></details>
-      <p class="field-help">De zekerheid is een inschatting van het model, geen gemeten nauwkeurigheid.</p>
+      <p class="field-help">Zekerheid is een inschatting van het model.</p></details>
       <div class="button-row"><button id="correctPortionBtn" class="button secondary" type="button">Portie verduidelijken</button><button id="newMealBtn" class="button primary" type="button">Nieuwe maaltijd</button></div>
     </section>
-    <aside class="medical-warning"><p><strong>Dit blijft een schatting.</strong> Gebruik het resultaat niet als enige basis voor een insulinedosis. Controleer bij twijfel het etiket, de portie of vraag advies aan uw zorgverlener.</p></aside>
-    <details id="historyPanel" class="utility-panel"><summary>Recente maaltijden <span id="historyCount">(0)</span></summary><p class="field-help">Maximaal 10 resultaten op dit toestel, zonder foto of opname.</p><div id="historyList"></div><button id="clearHistoryBtn" class="button ghost" type="button" disabled>Geschiedenis wissen</button></details>
+    <aside class="medical-warning"><p><strong>Dit blijft een schatting.</strong> Niet als enige basis voor een insulinedosis.</p></aside>
+
+  </main>
+  <footer class="app-footer"><button id="settingsBtn" type="button" class="text-button">Meer & instellingen</button><p>© Freddy Sleeuwaert · <span id="appVersion">3.0.1</span></p></footer>
+
+  <dialog id="settingsDialog" aria-labelledby="settingsTitle"><div class="settings-heading"><h2 id="settingsTitle">Meer & instellingen</h2><button id="closeSettingsBtn" type="button" class="button ghost">Sluiten</button></div>    <details id="historyPanel" class="utility-panel"><summary>Recente maaltijden <span id="historyCount">(0)</span></summary><p class="field-help">Maximaal 10 resultaten op dit toestel, zonder foto of opname.</p><div id="historyList"></div><button id="clearHistoryBtn" class="button ghost" type="button" disabled>Geschiedenis wissen</button></details>
     <details class="utility-panel"><summary>Installatie &amp; privacy</summary>
       <button id="installBtn" class="button secondary" type="button" hidden>Installeer op dit toestel</button>
       <p id="installHelp">Op iPhone: open deze app in Safari, tik op Delen en kies ‘Zet op beginscherm’. Op Android: open het browsermenu en kies ‘App installeren’ of ‘Toevoegen aan startscherm’.</p>
@@ -58,10 +65,7 @@
       <p class="field-help">Optioneel. De huidige foto en beschrijving blijven maximaal 24 uur beschikbaar voor herstel. Recente resultaten blijven staan tot u ze wist. Deze gegevens worden niet tussen toestellen gesynchroniseerd. U kunt alles hieronder verwijderen.</p>
       <button id="clearDataBtn" class="button ghost" type="button">Bewaarde maaltijden verwijderen</button>
       <p class="field-help">Voor analyse worden uw foto en beschrijving via onze server naar OpenAI gestuurd. Bij inspreken wordt ook uw opname doorgestuurd. De app bewaart deze niet in een eigen serverdatabank. De verwerking door OpenAI volgt diens gegevensbeleid.</p>
-    </details>
-  </main>
-  <footer class="app-footer"><p>Koolhydraten Scanner · <span id="appVersion">3.0.0</span></p><p>© 2026 Freddy Sleeuwaert · Persoonlijk en educatief gebruik</p></footer>
-  <div id="actionBar" class="action-bar"><div class="action-inner"><button id="analyzeButton" class="button primary" type="button" disabled>Analyseer maaltijd</button><button id="cancelAnalysisBtn" class="button ghost" type="button" hidden>Annuleren</button><button id="resetBtn" class="button ghost" type="button">Wissen</button></div></div>
+    </details></dialog>
   <dialog id="photoDialog" class="photo-dialog" aria-label="Maaltijdfoto"><button id="closePhotoBtn" class="button ghost" type="button" autofocus>Sluiten</button><img id="largePreview" alt="Vergrote maaltijdfoto"></dialog>
   <dialog id="refillDialog" aria-labelledby="refillTitle"><form id="refillForm"><h2 id="refillTitle">Feedback &amp; gratis scans</h2><p id="feedbackExplanation">Stuur uw ervaring en ontvang een code voor onbeperkt gratis scans.</p><a id="feedbackLink" class="button secondary" href="mailto:fredje4711@gmail.com">Feedback sturen</a><label for="refillCode">Uw ontvangen code</label><input id="refillCode" type="password" inputmode="numeric" autocomplete="off" maxlength="40" required><p id="refillError" class="error-text" role="alert" hidden></p><p class="field-help">Uw tegoed geldt voor deze browser op dit toestel.</p><div class="button-row"><button id="refillCancel" class="button ghost" type="button">Sluiten</button><button class="button primary" type="submit">Code gebruiken</button></div></form></dialog>
   <dialog id="confirmDialog" aria-labelledby="confirmTitle"><h2 id="confirmTitle">Bewaarde gegevens verwijderen?</h2><p id="confirmText"></p><div class="button-row"><button id="confirmCancel" class="button ghost" type="button" autofocus>Annuleren</button><button id="confirmAccept" class="button primary" type="button">Verwijderen</button></div></dialog>

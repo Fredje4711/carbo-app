@@ -1,10 +1,11 @@
-import { normalizeAnalysis, formatGrams } from './lib/analysis.js?v=10';
-import { createLocalData, validDraft, addHistory } from './lib/local-data.js?v=10';
-import { CREDIT_KEY, FEEDBACK_CODE, parseCredits, creditValue } from './lib/credits.js?v=10';
+import { normalizeAnalysis, formatGrams } from './lib/analysis.js?v=12';
+import { createLocalData, validDraft, addHistory } from './lib/local-data.js?v=12';
+import { CREDIT_KEY, FEEDBACK_CODE, parseCredits, creditValue } from './lib/credits.js?v=12';
 
 const API_BASE = location.hostname.endsWith('github.io') ? 'https://carbo-app.vercel.app' : '';
 const REQUEST_TIMEOUT = 55_000;
 const REMEMBER_KEY = 'carbo_remember_meals';
+const LOCAL_PREVIEW = ['localhost', '127.0.0.1'].includes(location.hostname);
 const $ = id => document.getElementById(id);
 const localData = createLocalData();
 const state = { mode: 'starting', image: null, analysis: null, operation: 0, controller: null, recording: null, remember: false, history: [], pendingDraft: null, credits: 50, creditStorageBlocked: false, retry: false, historical: false };
@@ -56,6 +57,7 @@ function syncUI() {
   $('cancelRecordBtn').hidden = !speaking;
   $('recordTimer').hidden = state.mode !== 'recording';
   $('speechHelp').textContent = speechSupported() ? 'Tik om op te nemen. Tik opnieuw om te stoppen.' : 'Deze browser ondersteunt geen spraakopname. U kunt de beschrijving typen.';
+  $('speechHelp').hidden = speechSupported();
   $('offlineNotice').hidden = online();
   $('refillBtn').disabled = busy;
   $('restoreBtn').disabled = state.mode === 'starting';
@@ -78,6 +80,7 @@ function clearResult() {
   state.analysis = null;
   state.historical = false;
   $('resultSection').hidden = true;
+  document.body.classList.toggle('has-result', false);
 }
 function showPreview() {
   $('previewWrap').hidden = !state.image;
@@ -97,7 +100,7 @@ function persist(task) {
 function saveDraft() {
   clearTimeout(saveTimer);
   if (!state.remember || state.pendingDraft) return storageQueue;
-  const draft = { version: 1, savedAt: Date.now(), image: state.image, description: $('description').value, analysis: state.analysis };
+  const draft = { version: 1, source: 'live-v1', savedAt: Date.now(), image: state.image, description: $('description').value, analysis: state.analysis };
   return persist(() => draft.image || draft.description ? localData.put('draft', draft) : localData.delete('draft'));
 }
 function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(saveDraft, 300); }
@@ -198,7 +201,7 @@ async function analyze() {
     if (state.analysis.meal_detected) {
       useCredit();
       if (state.remember) {
-        state.history = addHistory(state.history, { id: crypto.randomUUID(), date: Date.now(), analysis: state.analysis });
+        state.history = addHistory(state.history, { id: crypto.randomUUID(), source: 'live-v1', date: Date.now(), analysis: state.analysis });
         const history = state.history;
         persist(() => localData.put('history', history)); renderHistory();
       }
@@ -218,8 +221,10 @@ function addText(parent, tag, text, className = '') {
 }
 function certainty(level) { return ({ hoog: 'Hoge zekerheid', middel: 'Redelijke zekerheid', laag: 'Lage zekerheid' })[level]; }
 function renderAnalysis(analysis, context = '') {
+  if ($('settingsDialog').open) $('settingsDialog').close();
   $('result-title').textContent = analysis.meal_detected ? 'Uw geschatte koolhydraten' : 'Geen bruikbare schatting';
   $('totalPanel').hidden = !analysis.meal_detected;
+  $('noMealMessage').hidden = analysis.meal_detected;
   $('totalConfidence').hidden = !analysis.meal_detected;
   $('totalBest').textContent = formatGrams(analysis.total.carbs_best_g);
   $('totalRange').textContent = `${formatGrams(analysis.total.carbs_min_g)}–${formatGrams(analysis.total.carbs_max_g)} g`;
@@ -228,19 +233,21 @@ function renderAnalysis(analysis, context = '') {
   $('summaryText').textContent = analysis.meal_detected ? analysis.summary : 'Er werd geen duidelijke maaltijd herkend. Maak een andere foto; dit betekent niet dat de maaltijd 0 g koolhydraten bevat.';
   $('resultContext').textContent = context; $('resultContext').hidden = !context;
   $('itemsList').replaceChildren();
+  $('explanationList').replaceChildren();
+  $('explanationDetails').open = false;
   for (const item of analysis.items) {
     const card = addText($('itemsList'), 'article', '', 'food-item');
     const heading = addText(card, 'div', '', 'food-heading');
     addText(heading, 'h3', item.name); addText(heading, 'strong', `${formatGrams(item.carbs_best_g)} g`, 'food-carbs');
     addText(card, 'p', item.portion);
-    addText(card, 'p', `Bereik: ${formatGrams(item.carbs_min_g)}–${formatGrams(item.carbs_max_g)} g`);
-    addText(card, 'p', item.reasoning, 'reasoning');
+    addText($('explanationList'), 'p', `${item.name}: ${formatGrams(item.carbs_min_g)}–${formatGrams(item.carbs_max_g)} g. ${item.reasoning}`, 'reasoning');
   }
   $('assumptionsList').replaceChildren();
   analysis.assumptions.forEach(text => addText($('assumptionsList'), 'li', text));
   $('assumptionsSection').hidden = !analysis.assumptions.length;
   $('assumptionsSection').open = false;
   $('resultSection').hidden = false;
+  document.body.classList.toggle('has-result', true);
   syncUI(); focusAndScroll('result-title');
 }
 function renderHistory() {
@@ -363,10 +370,11 @@ async function initializeStorage() {
     if (state.remember) {
       const history = await localData.get('history');
       state.history = (Array.isArray(history) ? history : []).slice(0, 10).flatMap(entry => {
+        if (LOCAL_PREVIEW && entry?.source !== 'live-v1') return []; // Never present old demo output as a real scan.
         try { return Number.isFinite(entry.date) && typeof entry.id === 'string' ? [{ ...entry, analysis: normalizeAnalysis(entry.analysis) }] : []; } catch { return []; }
       });
       const draft = await localData.get('draft');
-      if (validDraft(draft)) { state.pendingDraft = draft; $('restoreNotice').hidden = false; }
+      if (validDraft(draft)) { state.pendingDraft = { ...draft, analysis: LOCAL_PREVIEW && draft.source !== 'live-v1' ? null : draft.analysis }; $('restoreNotice').hidden = false; }
       else await localData.delete('draft');
     } else await localData.clear();
   } catch { if (state.remember) status('Bewaarde gegevens zijn niet beschikbaar. U kunt een nieuwe maaltijd scannen.', 'error'); }
@@ -427,6 +435,8 @@ $('correctPortionBtn').addEventListener('click', () => {
   focusAndScroll('description');
 });
 $('previewButton').addEventListener('click', () => { if (state.image) { $('largePreview').src = state.image; $('photoDialog').showModal(); } });
+$('settingsBtn').addEventListener('click', () => $('settingsDialog').showModal());
+$('closeSettingsBtn').addEventListener('click', () => $('settingsDialog').close());
 $('closePhotoBtn').addEventListener('click', () => $('photoDialog').close());
 $('refillBtn').addEventListener('click', () => { $('refillCode').value = ''; $('refillError').hidden = true; $('refillDialog').showModal(); });
 $('refillCancel').addEventListener('click', () => $('refillDialog').close());

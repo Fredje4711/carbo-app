@@ -1,3 +1,5 @@
+> Dit verslag betreft de eerdere versie 3.0.0. Die oplevering is na gebruikersfeedback gecorrigeerd; zie CORRECTIE-COMPACT.md en START-HIER.md.
+
 # Uitgevoerde verbetering — 22 september 2026
 
 ## Werkmap en versie

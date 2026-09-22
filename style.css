@@ -629,3 +629,54 @@ html {
     transition:none!important
   }
 }
+/* Compacte gsm-indeling: dezelfde eenvoudige opzet als het origineel. */
+.app-header { padding: max(8px, env(safe-area-inset-top)) 12px 8px; }
+.header-inner { max-width: 480px; gap: 9px; }
+.app-mark { width: 32px; height: 32px; border-radius: 8px; }
+h1 { font-size: 1.2rem; }
+h2 { font-size: 1.15rem; }
+.page-shell { width: min(calc(100% - 16px), 480px); margin: 8px auto 0; }
+.scanner-card, .result-card { padding: 12px; margin-bottom: 8px; border-radius: 13px; }
+.intro p { font-size: .875rem; margin-bottom: 10px; }
+.upload-grid { gap: 8px; }
+.button, .upload-button { min-height: 44px; padding: 8px 10px; border-radius: 10px; font-size: .9375rem; }
+.preview-wrap { margin: 8px 0 0; }
+.preview-wrap img { height: 100px; }
+.preview-wrap figcaption { padding: 2px 8px; font-size: .75rem; }
+.description-block { margin-top: 10px; }
+.field-heading label { font-size: .875rem; }
+textarea { min-height: 58px; height: 58px; margin: 5px 0 6px; padding: 7px 9px; }
+.speech-row { gap: 6px; }
+.help-panel { margin-top: 6px; border-top: 0; }
+summary { min-height: 40px; padding: 9px 0; font-size: .875rem; }
+.action-bar, .keyboard-open .action-bar { position: static; padding: 0; border: 0; margin-top: 6px; background: none; }
+.action-inner { gap: 8px; }
+.credit-panel { margin-top: 3px; gap: 6px; }
+.credit-panel p, .text-button { font-size: .8125rem; }
+.text-button { min-height: 40px; padding: 6px; }
+.status { padding: 8px 10px; margin-top: 8px; font-size: .875rem; }
+.status[data-type=success] { display: none; }
+.medical-warning { margin-bottom: 4px; padding: 8px 11px; border-radius: 10px; font-size: .8125rem; }
+.app-footer, .keyboard-open .app-footer { padding: 0 12px max(12px, env(safe-area-inset-bottom)); font-size: .75rem; }
+.app-footer p { margin: 0; }
+.has-result .scanner-card { display: none; }
+.result-heading { align-items: center; gap: 6px; }
+.result-heading h2 { flex: 1; margin-bottom: 4px; }
+.confidence { font-size: .75rem; padding: 4px 6px; margin-bottom: 4px; }
+.total-panel { padding: 11px 13px; margin: 8px 0; gap: 8px; }
+.total-panel strong { font-size: 1.5rem; }
+.items-list { gap: 0; }
+.food-item { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 8px 0; }
+.food-heading h3 { margin: 0; font-size: .9375rem; }
+.food-item p { color: var(--muted); font-size: .8125rem; margin: 1px 0 0; }
+.result-card .button-row { margin-top: 8px; gap: 8px; }
+.result-card .button-row>* { flex: 1; }
+.reasoning { font-size: .875rem; margin-bottom: 8px; }
+.settings-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.settings-heading h2 { margin: 0; }
+#settingsDialog .utility-panel { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 0 0 10px; margin: 0; }
+#settingsDialog .setting { align-items: center; font-size: .9375rem; font-weight: normal; }
+#settingsDialog .setting input { width: 24px; }
+#settingsDialog .field-help { font-size: .8125rem; }
+html { scroll-padding-bottom: 12px; }
+@media(max-width:360px) { .result-card .button-row>* { flex: 1; } .result-card .button-row .button { font-size: .8125rem; } }

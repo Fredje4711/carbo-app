@@ -164,3 +164,12 @@ test('een update wordt uitgesteld wanneer de huidige maaltijd niet kan worden op
   app.state.remember = true; app.state.image = 'data:image/jpeg;base64,dGVzdA==';
   await get('updateBtn').emit('click'); assert.equal(posted, false); assert.match(get('statusMessage').textContent, /uitgesteld/);
 });
+
+test('oude lokale demoresultaten worden niet als echte scans hersteld', async () => {
+  const { app, stored, local } = harness(); stored.set('carbo_remember_meals', '1');
+  local.set('history', [{ id: 'oude-demo', date: Date.now(), analysis: meal }]);
+  local.set('draft', { version: 1, savedAt: Date.now(), image: 'data:image/jpeg;base64,dGVzdA==', description: '', analysis: meal });
+  await app.initializeStorage();
+  assert.equal(app.state.history.length, 0); assert.equal(app.state.pendingDraft.analysis, null);
+  assert.ok(app.state.pendingDraft.image);
+});

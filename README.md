@@ -1,11 +1,11 @@
-# Koolhydraten Scanner 3.0.0
+# Koolhydraten Scanner 3.0.1
 
-Mobiele PWA met Vercel-functies voor een voorzichtige koolhydraatschatting en Nederlandse spraakomzetting. GitHub blijft de bron; Vercel blijft de hosting. Begin bij [START-HIER.md](START-HIER.md).
+Mobiele PWA met Vercel-functies voor een voorzichtige koolhydraatschatting en Nederlandse spraakomzetting. GitHub blijft de bron; Vercel blijft de hosting. Begin bij [START-HIER.md](START-HIER.md). Zie ook [de correctie na uw gebruikerstest](docs/CORRECTIE-COMPACT.md).
 
 ## Verbeteringen
 
-- Aanraakknoppen vanaf 48 px, leesbare hulptekst, compacte foto met vergroting en vaste onderste actie.
-- Na een resultaat verandert de hoofdactie in Nieuwe maaltijd om onbedoelde herhaalscans te vermijden.
+- Compacte opzet gebaseerd op het origineel, knoppen vanaf 44 px en een foto van 100 px hoog die u kunt vergroten. De analyseknop staat in het formulier.
+- Het resultaat vervangt het formulier. Extra uitleg is uitklapbaar. Geschiedenis en installatie/privacy staan onder Meer & instellingen.
 - Eén actieve bewerking tegelijk, annulering en bescherming tegen late antwoorden en overlappende fotokeuzes.
 - Fotoverwerking tot 40 MB invoer, lokaal verkleinen tot 1280 px, browserondersteunde HEIC-conversie met duidelijke terugvalmelding. Preview gebruikt de verkleinde afbeelding.
 - Opnameteller tot 45 seconden, microfoon vrijgeven, annuleren en tijdslimiet voor tekstomzetting.
@@ -21,12 +21,12 @@ Mobiele PWA met Vercel-functies voor een voorzichtige koolhydraatschatting en Ne
 npm ci
 npm run check
 npm test
-npm run demo
+npm run dev
 ```
 
-Zonder werkende npm-launcher zijn `node tools/check.mjs`, `node --test test/*.test.js` en `node tools/dev-server.mjs --demo` bruikbaar zodra dependencies aanwezig zijn. Op deze laptop zijn de bestaande dependencies naar de nieuwe werkmap gekopieerd; de lockfile blijft leidend voor nieuwe installaties.
+Zonder werkende npm-launcher zijn `node tools/check.mjs`, `node --test test/*.test.js` en `node tools/dev-server.mjs` bruikbaar zodra dependencies aanwezig zijn. Op deze laptop zijn de bestaande dependencies naar de nieuwe werkmap gekopieerd; de lockfile blijft leidend voor nieuwe installaties.
 
-De demo op poort 4174 geeft vaste resultaten en roept OpenAI nooit aan. De gewone ontwikkelserver op poort 4173 gebruikt de echte serverfuncties en leest alleen omgevingsvariabelen (geen automatische .env-import). Beide luisteren uitsluitend op 127.0.0.1.
+De standaard ontwikkelserver op poort 4174 stuurt de werkelijk gekozen foto en audio door naar de bestaande Vercel-service; een lokale API-sleutel is niet nodig. Met `--local-api` worden de gewijzigde lokale serverfuncties gebruikt en is `OPENAI_API_KEY` wel nodig. De server luistert uitsluitend op 127.0.0.1. De vroegere demo met vaste resultaten is verwijderd.
 
 ## Vercel-configuratie
 

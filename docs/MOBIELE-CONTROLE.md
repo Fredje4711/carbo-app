@@ -1,3 +1,5 @@
+> Historisch verslag van de technische tests van versie 3.0.0. De demo is inmiddels verwijderd; zie CORRECTIE-COMPACT.md voor de werkende compacte versie 3.0.1.
+
 # Mobiele acceptatiecontrole
 
 ## Automatisch gecontroleerd

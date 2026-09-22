@@ -1,13 +1,12 @@
 {
   "name": "carbo-app",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node --test test/*.test.js",
     "check": "node tools/check.mjs",
-    "dev": "node tools/dev-server.mjs",
-    "demo": "node tools/dev-server.mjs --demo"
+    "dev": "node tools/dev-server.mjs"
   },
   "engines": {
     "node": ">=20"
