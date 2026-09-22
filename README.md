@@ -1,10 +1,10 @@
-# Koolhydraten Scanner 3.3.2
+# Koolhydraten Scanner 3.3.3
 
 Mobiele PWA met Vercel-functies voor een voorzichtige koolhydraatschatting en Nederlandse spraakomzetting. GitHub blijft de bron; Vercel blijft de hosting. Begin bij [START-HIER.md](START-HIER.md). Zie ook [de correctie na uw gebruikerstest](docs/CORRECTIE-COMPACT.md).
 
 ## Verbeteringen
 
-- Compacte opzet gebaseerd op het origineel, knoppen vanaf 44 px en een foto van 100 px hoog die u kunt vergroten. De analyseknop staat in het formulier.
+- Compacte opzet gebaseerd op het origineel, knoppen vanaf 44 px en een foto over de volledige breedte. De analyseknop staat in het formulier.
 - Foto en formulier blijven boven het resultaat staan. Scroll terug voor aanvullende ingrediënten of porties en analyseer dezelfde foto opnieuw. De knop Maaltijden opent uw bewaarde maaltijden en de opties voor lokale opslag.
 - Eén actieve bewerking tegelijk, annulering en bescherming tegen late antwoorden en overlappende fotokeuzes.
 - Fotoverwerking tot 40 MB invoer, lokaal verkleinen tot 1280 px, browserondersteunde HEIC-conversie met duidelijke terugvalmelding. Preview gebruikt de verkleinde afbeelding.
@@ -56,6 +56,6 @@ De Redis-call voert atomaire telling uit, bewaart een HMAC van het IP in plaats 
 
 Het manifest blijft dezelfde identiteit en start-URL gebruiken. Verhoog bij wijzigingen alle `v=...`-assetverwijzingen in index.html, script.js en service-worker.js samen met de cachenaam. Nieuwe workers wachten op Nieuwe versie openen of het sluiten van de oude appvensters. Op de oude versie 2 ontbreekt de updateknop; sluit die app volledig en open opnieuw om versie 3 te activeren.
 
-Testcode, hulpmiddelen en voorbeeldbestanden worden via `.vercelignore` uitgesloten van publicatie. Er zijn geen wijzigingen naar GitHub gepusht of naar productie uitgerold tijdens deze lokale verbeteringsronde.
+Testcode, hulpmiddelen en voorbeeldbestanden worden via `.vercelignore` uitgesloten van publicatie. Publicatie verloopt via de bestaande repository Fredje4711/carbo-app, branch main. Vercel en GitHub Pages volgen die branch. Controleer eerst de Vercel-preview voordat de productiebranch wordt bijgewerkt.
 
 Zie [mobiele acceptatiecontrole](docs/MOBIELE-CONTROLE.md) voor de nog vereiste iPhone-/Androidpraktijktests.

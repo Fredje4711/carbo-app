@@ -11,8 +11,8 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="stylesheet" href="style.css?v=24">
-  <script type="module" src="entry.js?v=24"></script>
+  <link rel="stylesheet" href="style.css?v=25">
+  <script type="module" src="entry.js?v=25"></script>
 </head>
 <body>
   <header class="app-header"><div class="header-inner">
@@ -68,10 +68,10 @@
       <button id="saveMealBtn" class="button secondary save-meal" type="button">Bewaar maaltijd</button><p id="saveMealStatus" class="field-help" role="status" hidden></p>
       <div class="button-row"><div class="control-with-help"><button id="correctPortionBtn" class="button secondary" type="button">Portie verduidelijken</button><button id="portionHelpBtn" class="info-button" type="button" aria-label="Uitleg bij Portie verduidelijken" aria-haspopup="dialog" aria-controls="helpDialog"><span aria-hidden="true">ⓘ</span></button></div><button id="newMealBtn" class="button primary" type="button">Nieuwe maaltijd</button></div>
     </section>
-    <aside class="medical-warning"><p><strong>Dit blijft een schatting.</strong> Niet als enige basis voor een insulinedosis.</p></aside>
+    <aside class="medical-warning"><p><strong>Dit blijft een schatting, geen medisch advies.</strong> AI kan voedingsmiddelen, ingrediënten en porties verkeerd inschatten. De werkelijke hoeveelheid koolhydraten kan afwijken.</p><p>Controleer het resultaat met de portiegrootte en voedingsinformatie op de verpakking. Bepaal of wijzig uw insulinedosis of andere medicatie niet uitsluitend op basis van deze app. Volg uw persoonlijke behandelplan en bespreek twijfel met uw arts, diabetesverpleegkundige of diëtist.</p></aside>
 
   </main>
-  <footer class="app-footer"><p>© Freddy Sleeuwaert · <span id="appVersion">3.3.2</span></p></footer>
+  <footer class="app-footer"><p>© Freddy Sleeuwaert · <span id="appVersion">3.3.3</span></p></footer>
 
   <dialog id="helpDialog" aria-labelledby="helpTitle" aria-describedby="helpText"><h2 id="helpTitle"></h2><p id="helpText"></p><button id="closeHelpBtn" class="button primary" type="button" autofocus>Begrepen</button></dialog>
   <dialog id="settingsDialog" aria-labelledby="settingsTitle"><div class="settings-heading"><h2 id="settingsTitle">Bewaarde maaltijden</h2><button id="closeSettingsBtn" type="button" class="button ghost">Sluiten</button></div>    <details id="historyPanel" class="utility-panel" open><summary>Maaltijden <span id="historyCount">(0)</span></summary><p class="field-help">Uw 10 laatst bewaarde maaltijden, met foto, extra informatie en resultaat. Alleen op dit toestel.</p><div id="historyList"></div><button id="clearHistoryBtn" class="button ghost" type="button" disabled>Bewaarde maaltijden wissen</button></details>

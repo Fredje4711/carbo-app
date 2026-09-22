@@ -1,6 +1,6 @@
 # Koolhydraten Scanner — start hier
 
-De actieve werkmap is `Koolhydraten scanner 5`. De compacte versie is 3.3.2.
+De actieve werkmap is `Koolhydraten scanner 5`. De compacte versie is 3.3.3.
 
 ## Openen met echte fotoanalyse
 
@@ -28,7 +28,7 @@ node tools/check.mjs
 node --test test/*.test.js
 ```
 
-De wijzigingen staan op `codex/mobile-improvements`. Productie op Vercel is nog niet vervangen. De lokale versie gebruikt de bestaande productie-API; voor een test van de gewijzigde serverfuncties gebruikt u een Vercel-preview of `node tools/dev-server.mjs --local-api` met `OPENAI_API_KEY` in de serveromgeving.
+De wijzigingen staan op `codex/mobile-improvements`. Publicatie naar de bestaande Vercel-app verloopt via main in Fredje4711/carbo-app, na controle van een preview. De lokale versie gebruikt de bestaande productie-API; voor een test van de gewijzigde serverfuncties gebruikt u een Vercel-preview of `node tools/dev-server.mjs --local-api` met `OPENAI_API_KEY` in de serveromgeving.
 
 De oorspronkelijke versie blijft in Git beschikbaar onder commit `dd4f2b9`.
 

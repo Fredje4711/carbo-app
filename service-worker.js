@@ -1,5 +1,5 @@
-const CACHE_NAME = 'carbo-app-v24';
-const STATIC_ASSETS = ['./', './index.html', './style.css?v=24', './script.js?v=24', './entry.js?v=24', './lib/installation.js?v=24', './lib/analysis.js?v=24', './lib/local-data.js?v=24', './lib/credits.js?v=24', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE_NAME = 'carbo-app-v25';
+const STATIC_ASSETS = ['./', './index.html', './style.css?v=25', './script.js?v=25', './entry.js?v=25', './lib/installation.js?v=25', './lib/analysis.js?v=25', './lib/local-data.js?v=25', './lib/credits.js?v=25', './manifest.json', './icon-192.png', './icon-512.png'];
 const FALLBACK_PAGE = new URL('./index.html', self.registration.scope).href;
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS)));
