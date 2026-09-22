@@ -11,8 +11,8 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="stylesheet" href="style.css?v=14">
-  <script type="module" src="entry.js?v=14"></script>
+  <link rel="stylesheet" href="style.css?v=15">
+  <script type="module" src="entry.js?v=15"></script>
 </head>
 <body>
   <header class="app-header"><div class="header-inner">
@@ -24,7 +24,8 @@
     <div class="scanner-card installation-card">
       <img src="icon-192.png" width="72" height="72" alt="Pictogram KH Scanner">
       <h2 id="installTitle">Uw maaltijdscanner op uw gsm</h2>
-      <div id="desktopInstructions"><p>U opent deze link op een computer, of uw toestel is niet als gsm herkend.</p><p><strong>Open deze e-mail op uw gsm en tik daar op de link.</strong> U krijgt dan de juiste stappen om de app te installeren.</p><p>Na installatie opent u de scanner met het pictogram op uw beginscherm.</p></div>
+      <p id="detectedDevice" class="notice" role="status"></p>
+      <div id="desktopInstructions"><p>Deze toepassing is bedoeld om als app op uw gsm te installeren.</p><p><strong>Open dezelfde e-mail op uw gsm en tik daar op de meegestuurde link.</strong></p><p>De installatiepagina herkent dan automatisch of u een Android-gsm of een iPhone gebruikt en toont de bijbehorende installatiestappen.</p><p>Na installatie opent u de scanner met het pictogram op uw beginscherm.</p></div>
       <div id="iosInstructions" hidden><h3>Installeren op iPhone</h3><ol><li>Open deze link in <strong>Safari</strong>. Staat hij in uw mail-app? Kies in het menu ‘Open in Safari’, of kopieer de link naar Safari.</li><li>Tik op <strong>Delen</strong> (het vierkant met de pijl omhoog). Soms staat Delen onder de knop met drie puntjes.</li><li>Scrol in het deelmenu naar <strong>Zet op beginscherm</strong>. Ontbreekt die optie? Kies ‘Wijzig taken’ en voeg ze toe.</li><li>Laat <strong>Open als webapp</strong> ingeschakeld als die optie verschijnt. Tik op <strong>Voeg toe</strong>.</li><li>Sluit Safari en tik op het pictogram <strong>KH Scanner</strong> op uw beginscherm.</li></ol></div>
       <div id="androidInstructions" hidden><h3>Installeren op Android</h3><button id="gatewayInstallBtn" class="button primary" type="button" hidden>Installeer KH Scanner</button><ol><li>Open deze link in <strong>Chrome</strong>. Staat hij in uw mail-app? Kies ‘Open in browser’, of kopieer de link naar Chrome.</li><li>Tik op het menu <strong>⋮</strong> rechtsboven.</li><li>Kies <strong>Installeren en snelkoppeling maken</strong> en daarna <strong>Installeren</strong>. Afhankelijk van uw Chrome-versie heet dit ‘Toevoegen aan startscherm’ of ‘App installeren’. Bevestig de installatie.</li><li>Sluit Chrome en tik op het pictogram <strong>KH Scanner</strong> op uw beginscherm.</li></ol></div>
       <p id="gatewayStatus" role="status" aria-live="polite"></p>
@@ -71,7 +72,7 @@
     <aside class="medical-warning"><p><strong>Dit blijft een schatting.</strong> Niet als enige basis voor een insulinedosis.</p></aside>
 
   </main>
-  <footer class="app-footer"><button id="settingsBtn" type="button" class="text-button">Meer & instellingen</button><p>© Freddy Sleeuwaert · <span id="appVersion">3.1.0</span></p></footer>
+  <footer class="app-footer"><button id="settingsBtn" type="button" class="text-button">Meer & instellingen</button><p>© Freddy Sleeuwaert · <span id="appVersion">3.1.1</span></p></footer>
 
   <dialog id="settingsDialog" aria-labelledby="settingsTitle"><div class="settings-heading"><h2 id="settingsTitle">Meer & instellingen</h2><button id="closeSettingsBtn" type="button" class="button ghost">Sluiten</button></div>    <details id="historyPanel" class="utility-panel"><summary>Recente maaltijden <span id="historyCount">(0)</span></summary><p class="field-help">Maximaal 10 resultaten op dit toestel, zonder foto of opname.</p><div id="historyList"></div><button id="clearHistoryBtn" class="button ghost" type="button" disabled>Geschiedenis wissen</button></details>
     <details class="utility-panel"><summary>Privacy &amp; bewaren</summary>

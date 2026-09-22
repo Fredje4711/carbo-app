@@ -1,7 +1,9 @@
-import { devicePlatform, scannerAllowed } from './lib/installation.js?v=14';
+import { devicePlatform, scannerAllowed } from './lib/installation.js?v=15';
 
 const $ = id => document.getElementById(id);
 const device = devicePlatform(navigator);
+const isIpad = /iPad/i.test(navigator.userAgent || '') || navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+$('detectedDevice').textContent = device === 'android' ? 'Geopend op een Android-gsm.' : device === 'ios' ? (isIpad ? 'Geopend op een iPad.' : 'Geopend op een iPhone.') : 'Geopend op een computer.';
 const displayMode = matchMedia('(display-mode: standalone)');
 let promptEvent;
 let launched = false;
@@ -20,7 +22,7 @@ async function openScanner() {
   }
   launched = true;
   try {
-    await import('./script.js?v=14');
+    await import('./script.js?v=15');
     $('installationGate').hidden = true;
     $('application').hidden = false;
   } catch {

@@ -24,6 +24,15 @@ async function gateway({ device = 'android', standalone = false, hostname = 'car
   return { get, events, loads: () => loads };
 }
 
+test('herkenning toont expliciete toestelmelding en uitsluitend de passende stappen', async () => {
+  for (const [device, label] of [['desktop', 'computer'], ['android', 'Android-gsm'], ['ios', 'iPhone']]) {
+    const page = await gateway({ device });
+    assert.equal(page.get('detectedDevice').textContent, 'Geopend op een ' + label + '.');
+    for (const platform of ['desktop', 'android', 'ios']) assert.equal(page.get(platform + 'Instructions').hidden, platform !== device);
+    assert.equal(page.loads(), 0);
+  }
+});
+
 test('installatiebevestiging in browser ontgrendelt de scanner nog niet', async () => {
   const page = await gateway();
   assert.equal(page.get('installationGate').hidden, false);
