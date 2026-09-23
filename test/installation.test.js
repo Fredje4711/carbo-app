@@ -10,7 +10,7 @@ const entrySource = readFileSync(new URL('../entry.js', import.meta.url), 'utf8'
 async function gateway({ device = 'android', standalone = false, hostname = 'carbo-app.vercel.app', search = '' } = {}) {
   const elements = new Map(); const events = {}; let loads = 0;
   const get = id => {
-    if (!elements.has(id)) elements.set(id, { hidden: true, addEventListener() {} });
+    if (!elements.has(id)) elements.set(id, { hidden: true, addEventListener(name, action) { this[name] = action; } });
     return elements.get(id);
   };
   vm.runInNewContext(entrySource, {
@@ -41,6 +41,37 @@ test('installatiebevestiging in browser ontgrendelt de scanner nog niet', async 
   assert.equal(page.loads(), 0);
   assert.equal(page.get('application').hidden, true);
   assert.match(page.get('gatewayStatus').textContent, /pictogram/);
+});
+
+test('bevestigde installatie toont wachthulp en voorkomt herhaald starten', async () => {
+  const page = await gateway(); let prompts = 0;
+  page.events.beforeinstallprompt({ preventDefault() {}, prompt: async () => { prompts++; }, userChoice: Promise.resolve({ outcome: 'accepted' }) });
+  assert.equal(page.get('androidDirectHelp').hidden, false);
+  assert.equal(page.get('androidFallback').open, false);
+  await page.get('gatewayInstallBtn').click();
+  assert.match(page.get('gatewayStatus').textContent, /enkele tientallen seconden/);
+  await page.get('gatewayInstallBtn').click();
+  assert.equal(prompts, 1);
+  page.events.appinstalled();
+  assert.match(page.get('gatewayStatus').textContent, /Installatie voltooid/);
+  assert.equal(page.get('androidFallback').hidden, true);
+});
+
+test('vroege voltooiingsmelding wordt niet overschreven door wachttekst', async () => {
+  const page = await gateway();
+  page.events.beforeinstallprompt({ preventDefault() {}, prompt: async () => page.events.appinstalled(), userChoice: Promise.resolve({ outcome: 'accepted' }) });
+  await page.get('gatewayInstallBtn').click();
+  assert.match(page.get('gatewayStatus').textContent, /Installatie voltooid/);
+});
+
+test('annuleren of fout toont de alternatieve installatiestappen', async () => {
+  for (const fails of [false, true]) {
+    const page = await gateway();
+    page.events.beforeinstallprompt({ preventDefault() {}, prompt: async () => { if (fails) throw Error('failed'); }, userChoice: Promise.resolve({ outcome: 'dismissed' }) });
+    await page.get('gatewayInstallBtn').click();
+    assert.equal(page.get('androidFallback').open, true);
+    assert.match(page.get('gatewayStatus').textContent, /browsermenu/);
+  }
 });
 
 test('standalone en laptoptest laden scanner zonder installatiepaneel', async () => {

@@ -4,3 +4,8 @@ node_modules/
 .env.*
 !.env.example
 compacte-gsm-preview.png
+
+# Lokale mailontwerpen en installatievoorbeeld
+docs/mail/
+docs/installatie-voorbeeld.html
+docs/installatie-voorbeeld.js

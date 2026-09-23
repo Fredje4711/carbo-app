@@ -1,6 +1,6 @@
-import { normalizeAnalysis, formatGrams } from './lib/analysis.js?v=25';
-import { createLocalData, validMealImage, addHistory } from './lib/local-data.js?v=25';
-import { CREDIT_KEY, FEEDBACK_CODE, parseCredits, creditValue } from './lib/credits.js?v=25';
+import { normalizeAnalysis, formatGrams } from './lib/analysis.js?v=26';
+import { createLocalData, validMealImage, addHistory } from './lib/local-data.js?v=26';
+import { CREDIT_KEY, FEEDBACK_CODE, parseCredits, creditValue } from './lib/credits.js?v=26';
 
 const API_BASE = location.hostname.endsWith('github.io') ? 'https://carbo-app.vercel.app' : '';
 const REQUEST_TIMEOUT = 55_000;

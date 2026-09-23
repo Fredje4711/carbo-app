@@ -11,8 +11,8 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="stylesheet" href="style.css?v=25">
-  <script type="module" src="entry.js?v=25"></script>
+  <link rel="stylesheet" href="style.css?v=26">
+  <script type="module" src="entry.js?v=26"></script>
 </head>
 <body>
   <header class="app-header"><div class="header-inner">
@@ -27,8 +27,13 @@
       <p id="detectedDevice" class="notice" role="status"></p>
       <div id="desktopInstructions"><p>Deze toepassing is bedoeld om als app op uw gsm te installeren.</p><p><strong>Open dezelfde e-mail op uw gsm en tik daar op de meegestuurde link.</strong></p><p>De installatiepagina herkent dan automatisch of u een Android-gsm of een iPhone gebruikt en toont de bijbehorende installatiestappen.</p><p>Na installatie vindt u KH Scanner terug op uw beginscherm of tussen uw andere apps. Tik op het pictogram om de scanner te openen.</p></div>
       <div id="iosInstructions" hidden><h3>Installeren op iPhone</h3><ol><li>Tik in Safari op <strong>Delen</strong> (het vierkant met de pijl omhoog).</li><li>Kies <strong>Zet op beginscherm</strong>.</li><li>Laat <strong>Open als webapp</strong> ingeschakeld als die optie verschijnt en tik op <strong>Voeg toe</strong>.</li><li>Tik daarna op het pictogram <strong>KH Scanner</strong> op uw beginscherm of in uw appbibliotheek.</li></ol></div>
-      <div id="androidInstructions" hidden><h3>Installeren op Android</h3><button id="gatewayInstallBtn" class="button primary" type="button" hidden>Installeer KH Scanner</button><ol><li>Tik op het menu <strong>⋮</strong> van uw browser.</li><li>Kies <strong>Toevoegen aan startscherm</strong> of <strong>App installeren</strong> en bevestig de installatie.</li><li>Tik daarna op het pictogram <strong>KH Scanner</strong> op uw beginscherm of tussen uw andere apps.</li></ol></div>
       <p id="gatewayStatus" role="status" aria-live="polite"></p>
+      <div id="androidInstructions" hidden>
+        <h3>Installeren op Android</h3>
+        <p id="androidDirectHelp" hidden>Tik op de knop hieronder en daarna op <strong>Installeren</strong> in het venster van uw browser. De installatie kan enkele tientallen seconden duren, soms langer. <strong>Wacht op de bevestiging; opnieuw klikken is niet nodig.</strong></p>
+        <button id="gatewayInstallBtn" class="button primary" type="button" hidden>Installeer KH Scanner</button>
+        <details id="androidFallback"><summary>Geen installatieknop of lukt het niet?</summary><p>Controleer eerst of KH Scanner al tussen uw apps staat. Zo niet, dan kunt u ook via het browsermenu installeren:</p><ol><li>Tik op het menu <strong>⋮</strong> van uw browser.</li><li>Kies <strong>Toevoegen aan startscherm</strong> of <strong>App installeren</strong> en bevestig.</li><li>Wacht tot de installatie voltooid is. Open daarna <strong>KH Scanner</strong> via het pictogram op uw beginscherm of tussen uw apps.</li></ol></details>
+      </div>
       <p class="field-help">Al geïnstalleerd? Tik op het pictogram van KH Scanner tussen uw apps. U hoeft de e-mail niet opnieuw te openen.</p>
       <noscript><p>Schakel JavaScript in en open deze link opnieuw om uw toestel te herkennen en de app te gebruiken.</p></noscript>
     </div>
@@ -71,7 +76,7 @@
     <aside class="medical-warning"><p><strong>Dit blijft een schatting, geen medisch advies.</strong> AI kan voedingsmiddelen, ingrediënten en porties verkeerd inschatten. De werkelijke hoeveelheid koolhydraten kan afwijken.</p><p>Controleer het resultaat met de portiegrootte en voedingsinformatie op de verpakking. Bepaal of wijzig uw insulinedosis of andere medicatie niet uitsluitend op basis van deze app. Volg uw persoonlijke behandelplan en bespreek twijfel met uw arts, diabetesverpleegkundige of diëtist.</p></aside>
 
   </main>
-  <footer class="app-footer"><p>© Freddy Sleeuwaert · <span id="appVersion">3.3.3</span></p></footer>
+  <footer class="app-footer"><p>© Freddy Sleeuwaert · <span id="appVersion">3.3.4</span></p></footer>
 
   <dialog id="helpDialog" aria-labelledby="helpTitle" aria-describedby="helpText"><h2 id="helpTitle"></h2><p id="helpText"></p><button id="closeHelpBtn" class="button primary" type="button" autofocus>Begrepen</button></dialog>
   <dialog id="settingsDialog" aria-labelledby="settingsTitle"><div class="settings-heading"><h2 id="settingsTitle">Bewaarde maaltijden</h2><button id="closeSettingsBtn" type="button" class="button ghost">Sluiten</button></div>    <details id="historyPanel" class="utility-panel" open><summary>Maaltijden <span id="historyCount">(0)</span></summary><p class="field-help">Uw 10 laatst bewaarde maaltijden, met foto, extra informatie en resultaat. Alleen op dit toestel.</p><div id="historyList"></div><button id="clearHistoryBtn" class="button ghost" type="button" disabled>Bewaarde maaltijden wissen</button></details>

@@ -1,6 +1,6 @@
 # Koolhydraten Scanner — start hier
 
-De actieve werkmap is `Koolhydraten scanner 5`. De compacte versie is 3.3.3.
+De actieve werkmap is `Koolhydraten scanner 5`. De compacte versie is 3.3.4.
 
 ## Openen met echte fotoanalyse
 
